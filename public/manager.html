@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Manager Validation · efin AI ROI</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--bg:#0b1020;--panel:#151d3b;--panel2:#1a234a;--line:#27305a;--txt:#e8ecff;--mute:#9aa3c7;--accent:#5b8cff;--green:#22c55e;--red:#ef4444;--yellow:#eab308;--purple:#a855f7}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(1200px 700px at 80% -10%,#1d2862 0%,transparent 60%),var(--bg);color:var(--txt);font-family:'IBM Plex Sans Thai',system-ui,sans-serif;min-height:100vh}
+.container{max-width:1100px;margin:0 auto;padding:24px}
+.hero{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#a855f7,#5b8cff);display:grid;place-items:center;font-weight:700}
+h1{font-size:18px;margin:0}
+.sub{color:var(--mute);font-size:12px}
+.user-pill{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);padding:6px 12px;border-radius:999px;font-size:12px}
+.dot{width:8px;height:8px;border-radius:50%;background:#a855f7}
+.btn-logout{background:transparent;border:1px solid var(--line);color:var(--mute);padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer;font-family:inherit}
+
+.tab-bar{display:flex;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:4px;margin-bottom:20px}
+.tab-btn{flex:1;padding:8px;background:transparent;border:0;color:var(--mute);font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;border-radius:8px}
+.tab-btn.active{background:linear-gradient(135deg,#a855f7,#5b8cff);color:#fff}
+
+section{display:none}
+section.active{display:block}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:14px}
+.report-card{background:var(--panel);border:1px solid var(--yellow);border-radius:14px;padding:20px;margin-bottom:14px}
+.report-card.review{border-color:var(--accent)}
+
+.row{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:start;margin-bottom:14px}
+.who{font-weight:700;font-size:15px}
+.who .pos{color:var(--mute);font-size:12px;font-weight:400;margin-left:6px}
+.month-pill{background:var(--panel2);padding:4px 10px;border-radius:999px;font-size:12px;font-family:'JetBrains Mono'}
+
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0;padding:14px;background:var(--panel2);border-radius:10px}
+@media(max-width:680px){.metrics{grid-template-columns:repeat(2,1fr)}}
+.metric .lbl{color:var(--mute);font-size:10px;text-transform:uppercase;letter-spacing:.4px}
+.metric .val{font-size:16px;font-weight:700;font-family:'JetBrains Mono';margin-top:2px}
+.metric .delta{font-size:11px;color:var(--green);margin-top:1px}
+
+.evidence-links{margin:10px 0}
+.evidence-links a{display:inline-block;background:var(--panel2);border:1px solid var(--line);padding:5px 10px;border-radius:6px;font-size:11px;margin:2px;color:var(--accent);text-decoration:none}
+.evidence-links a:hover{border-color:var(--accent)}
+
+.validate-form{display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.validate-form.show{display:block}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media(max-width:680px){.grid-3{grid-template-columns:1fr}}
+label{display:block;color:var(--mute);font-size:11px;margin-bottom:4px;text-transform:uppercase;letter-spacing:.3px}
+input,select,textarea{width:100%;padding:8px 10px;background:#0f1638;border:1px solid var(--line);color:var(--txt);border-radius:6px;font-family:inherit;font-size:13px;outline:none}
+input:focus{border-color:var(--accent)}
+textarea{resize:vertical;min-height:60px}
+.helper{color:var(--mute);font-size:10px;margin-top:2px}
+.contrib-slider-wrap{margin-top:10px}
+.contrib-display{font-size:24px;font-weight:700;font-family:'JetBrains Mono';color:var(--purple);text-align:center;margin:6px 0}
+
+.actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+button.approve{background:var(--green);color:#0b1020;border:0;padding:10px 24px;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;flex:1}
+button.reject{background:var(--red);color:#fff;border:0;padding:10px 24px;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;flex:1}
+button.review-btn{background:var(--accent);color:#fff;border:0;padding:10px 20px;border-radius:8px;font-weight:600;font-size:12px;cursor:pointer;font-family:inherit}
+button.cancel-btn{background:transparent;border:1px solid var(--line);color:var(--mute);padding:10px 20px;border-radius:8px;font-size:12px;cursor:pointer;font-family:inherit}
+
+.empty{text-align:center;padding:60px;color:var(--mute)}
+.empty .ico{font-size:40px;margin-bottom:10px}
+.loading{display:grid;place-items:center;padding:60px;color:var(--mute)}
+.spin{width:36px;height:36px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;margin-bottom:12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.summary-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+@media(max-width:680px){.summary-strip{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;text-align:center}
+.kpi .lbl{color:var(--mute);font-size:11px;text-transform:uppercase}
+.kpi .val{font-size:22px;font-weight:700;margin-top:4px}
+.kpi.pending .val{color:var(--yellow)}
+.kpi.approved .val{color:var(--green)}
+.kpi.team .val{color:var(--purple)}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="loading"><div class="spin"></div><div>กำลังโหลด...</div></div>
+</div>
+
+<template id="tpl">
+<div class="container">
+  <div class="hero">
+    <div class="brand">
+      <div class="logo">e</div>
+      <div><h1>Manager Validation</h1><div class="sub" id="subTeam">—</div></div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <a href="/employee.html" style="color:var(--mute);font-size:12px;text-decoration:none">📝 กรอกของฉัน</a>
+      <div class="user-pill"><div class="dot"></div><span id="userName"></span></div>
+      <button class="btn-logout" onclick="logout()">ออกจากระบบ</button>
+    </div>
+  </div>
+
+  <div class="summary-strip">
+    <div class="kpi pending"><div class="lbl">⏳ รอ Validate</div><div class="val" id="kPending">0</div></div>
+    <div class="kpi approved"><div class="lbl">✅ Approved (เดือนนี้)</div><div class="val" id="kApproved">0</div></div>
+    <div class="kpi team"><div class="lbl">👥 ลูกทีม</div><div class="val" id="kTeam">0</div></div>
+    <div class="kpi"><div class="lbl">⌀ AI Contribution %</div><div class="val" id="kAvgContrib" style="color:var(--accent)">—</div></div>
+  </div>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="pending">⏳ รอ Validate</button>
+    <button class="tab-btn" data-tab="approved">✅ Approved</button>
+    <button class="tab-btn" data-tab="team">👥 ลูกทีม</button>
+  </div>
+
+  <section id="sec-pending" class="active"><div id="pendingList"></div></section>
+  <section id="sec-approved"><div id="approvedList"></div></section>
+  <section id="sec-team"><div id="teamList"></div></section>
+</div>
+</template>
+
+<script>
+const SUPABASE_URL='https://vxcobdgptjcprexpktyd.supabase.co';
+const SUPABASE_KEY='sb_publishable_S5c-ncZ9JRoe_UVTJhCblg_J2hAnD5a';
+const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+let ME=null, REPORTS=[], TEAM=[], BASELINES={};
+
+async function init(){
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){ location.href='/login.html'; return; }
+
+  const {data:emp}=await sb.from('employees').select('*').eq('user_id',session.user.id).maybeSingle();
+  if(!emp){ document.getElementById('app').innerHTML='<div style="padding:60px;text-align:center;color:#ef4444">บัญชีไม่ผูกพนักงาน</div>'; return; }
+  ME=emp;
+  if(emp.role==='hr_admin'){ location.href='/index.html'; return; }
+  if(emp.role==='employee'){ location.href='/employee.html'; return; }
+
+  document.getElementById('app').innerHTML=document.getElementById('tpl').innerHTML;
+  document.getElementById('userName').textContent=emp.full_name+' (Manager)';
+
+  // Load team
+  const {data:team}=await sb.from('employees').select('*').eq('manager_emp_id',emp.id).order('full_name');
+  TEAM=team||[];
+  document.getElementById('subTeam').textContent=`ทีมของ ${emp.full_name} · ${TEAM.length} คน`;
+  document.getElementById('kTeam').textContent=TEAM.length;
+
+  // Load baselines for team
+  if(TEAM.length>0){
+    const {data:bls}=await sb.from('baseline').select('*').in('employee_id',TEAM.map(t=>t.id));
+    (bls||[]).forEach(b=>{ if(!BASELINES[b.employee_id]) BASELINES[b.employee_id]=b; });
+  }
+
+  // Load all team reports
+  if(TEAM.length>0){
+    const {data:reports}=await sb.from('monthly_reports').select('*').in('employee_id',TEAM.map(t=>t.id)).order('fiscal_month',{ascending:false});
+    REPORTS=reports||[];
+  }
+
+  document.querySelectorAll('.tab-btn').forEach(t=>t.addEventListener('click',()=>{
+    document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('section').forEach(s=>s.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('sec-'+t.dataset.tab).classList.add('active');
+  }));
+
+  render();
+}
+
+function render(){
+  const pending=REPORTS.filter(r=>r.status==='pending');
+  const approved=REPORTS.filter(r=>r.status==='approved');
+  document.getElementById('kPending').textContent=pending.length;
+  const thisMonth=new Date().toISOString().slice(0,7);
+  document.getElementById('kApproved').textContent=approved.filter(r=>r.fiscal_month===thisMonth).length;
+
+  // Render pending list
+  if(pending.length===0){
+    document.getElementById('pendingList').innerHTML='<div class="empty"><div class="ico">🎉</div><div>ไม่มีรายงานรอ validate</div></div>';
+  } else {
+    document.getElementById('pendingList').innerHTML=pending.map(r=>renderReport(r,'review')).join('');
+  }
+
+  // Approved
+  if(approved.length===0){
+    document.getElementById('approvedList').innerHTML='<div class="empty"><div class="ico">📊</div><div>ยังไม่มี approved</div></div>';
+  } else {
+    document.getElementById('approvedList').innerHTML=approved.map(r=>renderReport(r,'view')).join('');
+  }
+
+  // Team
+  document.getElementById('teamList').innerHTML=TEAM.map(t=>{
+    const lastReport=REPORTS.filter(r=>r.employee_id===t.id)[0];
+    const stat=lastReport?` · ${lastReport.fiscal_month} ${lastReport.status}`:' · ยังไม่มีรายงาน';
+    return `<div class="card"><div class="row"><div><div class="who">${t.full_name}<span class="pos">${t.position||''}</span></div><div class="sub" style="margin-top:2px">${t.email||'(ยังไม่ตั้ง email)'}${stat}</div></div></div></div>`;
+  }).join('') || '<div class="empty">ไม่มีลูกทีม</div>';
+}
+
+function renderReport(r, mode){
+  const emp=TEAM.find(t=>t.id===r.employee_id);
+  const baseline=BASELINES[r.employee_id];
+  const groupColors={Champion:'#a855f7',Adopter:'#3b82f6',Beginner:'#eab308','Non-User':'#64748b'};
+  const evHtml=(r.evidence_links||[]).map(l=>`<a href="${l}" target="_blank">🔗 ${l.length>50?l.slice(0,50)+'...':l}</a>`).join('') || '<span style="color:var(--mute);font-size:11px">— ไม่มีหลักฐาน</span>';
+  const cardClass=mode==='review'?'report-card':'report-card review';
+
+  return `<div class="${cardClass}" data-rid="${r.id}">
+    <div class="row">
+      <div>
+        <div class="who">${emp?.full_name||'?'}<span class="pos">${emp?.position||''}</span></div>
+        <div style="margin-top:4px"><span style="background:${groupColors[r.ai_group]};color:#fff;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600">${r.ai_group}</span> · ${r.ai_tool_used||'-'} · ${r.usage_days_per_week} วัน/สัปดาห์</div>
+      </div>
+      <div class="month-pill">${r.fiscal_month}</div>
+    </div>
+    <div class="metrics">
+      <div class="metric"><div class="lbl">Output ก่อน</div><div class="val">${baseline?.output_before||'-'}</div></div>
+      <div class="metric"><div class="lbl">Output หลัง</div><div class="val">${r.output_after}</div><div class="delta">${baseline?'+'+(((r.output_after-baseline.output_before)/baseline.output_before)*100).toFixed(0)+'%':''}</div></div>
+      <div class="metric"><div class="lbl">เวลา ก่อน → หลัง</div><div class="val" style="font-size:13px">${baseline?.time_per_output_before||'-'}h → ${r.time_per_output_after}h</div></div>
+      <div class="metric"><div class="lbl">Hours Saved</div><div class="val" style="color:var(--green)">${(r.hours_saved||0).toFixed(0)} ชม.</div></div>
+    </div>
+    <div><b style="font-size:12px;color:var(--mute)">📎 หลักฐาน:</b><div class="evidence-links">${evHtml}</div></div>
+    ${r.comment?`<div style="background:var(--panel2);padding:10px;border-radius:6px;font-size:12px;margin-top:8px"><b>💬 Comment:</b> ${r.comment}</div>`:''}
+    ${mode==='review'?`
+      <div class="actions">
+        <button class="review-btn" onclick="toggleValidate(${r.id})">✏️ Review + ใส่ AI Contribution %</button>
+      </div>
+      <form class="validate-form" id="vf-${r.id}" onsubmit="submitValidation(event,${r.id})">
+        <div class="grid-3">
+          <div><label>เร็วขึ้น (1-5)</label><input type="number" id="speed-${r.id}" min="1" max="5" step="0.5" value="3" required /></div>
+          <div><label>Output (1-5)</label><input type="number" id="output-${r.id}" min="1" max="5" step="0.5" value="3" required /></div>
+          <div><label>คุณภาพ (1-5)</label><input type="number" id="quality-${r.id}" min="1" max="5" step="0.5" value="3" required /></div>
+        </div>
+        <div style="margin-top:10px"><label>Business Impact (1-5)</label><input type="number" id="biz-${r.id}" min="1" max="5" step="0.5" value="3" required /></div>
+        <div class="contrib-slider-wrap">
+          <label>🎯 AI Contribution % (ผลลัพธ์เกิดจาก AI กี่ %?)</label>
+          <input type="range" id="contrib-${r.id}" min="0" max="100" step="5" value="60" oninput="document.getElementById('contribDisp-${r.id}').textContent=this.value+'%'" />
+          <div class="contrib-display" id="contribDisp-${r.id}">60%</div>
+          <div class="helper">100% = AI ทำหมด · 70% = AI หลัก · 50% = AI ครึ่ง · 30% = AI บางส่วน · 0% = ไม่เกี่ยว</div>
+        </div>
+        <div class="grid-3" style="margin-top:10px">
+          <div><label>Error rate หลัง (%)</label><input type="number" id="err-${r.id}" min="0" max="100" step="0.1" placeholder="เช่น 5" /></div>
+          <div><label>รายได้เพิ่ม (฿)</label><input type="number" id="rev-${r.id}" min="0" value="0" /></div>
+          <div><label>ลดต้นทุน (฿)</label><input type="number" id="cost-${r.id}" min="0" value="0" /></div>
+        </div>
+        <div style="margin-top:10px"><label>Comment</label><textarea id="cm-${r.id}" rows="2" placeholder="เห็นด้วย/ไม่เห็นด้วย · feedback"></textarea></div>
+        <div class="actions">
+          <button type="submit" class="approve">✅ Approve</button>
+          <button type="button" class="reject" onclick="rejectReport(${r.id})">❌ Reject</button>
+          <button type="button" class="cancel-btn" onclick="toggleValidate(${r.id})">ยกเลิก</button>
+        </div>
+      </form>
+    `:`
+      <div style="background:var(--panel2);padding:10px;border-radius:6px;font-size:12px;margin-top:10px">
+        ✅ Approved · จะเข้า ROI Dashboard ใน HR view
+      </div>
+    `}
+  </div>`;
+}
+
+window.toggleValidate=(rid)=>{
+  document.getElementById('vf-'+rid).classList.toggle('show');
+};
+
+window.submitValidation=async(e,rid)=>{
+  e.preventDefault();
+  const r=REPORTS.find(x=>x.id===rid);
+  const payload={
+    employee_id: r.employee_id,
+    fiscal_month: r.fiscal_month,
+    manager_name: ME.full_name,
+    manager_user_id: (await sb.auth.getUser()).data.user.id,
+    validate_output: true,
+    validate_time_saved: true,
+    speed_score: parseFloat(document.getElementById('speed-'+rid).value),
+    output_score: parseFloat(document.getElementById('output-'+rid).value),
+    quality_score: parseFloat(document.getElementById('quality-'+rid).value),
+    business_impact_score: parseFloat(document.getElementById('biz-'+rid).value),
+    ai_contribution_pct: parseInt(document.getElementById('contrib-'+rid).value),
+    err_after: parseFloat(document.getElementById('err-'+rid).value)||null,
+    added_revenue: parseFloat(document.getElementById('rev-'+rid).value)||0,
+    cost_reduction: parseFloat(document.getElementById('cost-'+rid).value)||0,
+    manager_comment: document.getElementById('cm-'+rid).value||null,
+    approved: true,
+    validated_at: new Date().toISOString()
+  };
+
+  // Upsert validation
+  const {data:existing}=await sb.from('manager_validations').select('id').eq('employee_id',r.employee_id).eq('fiscal_month',r.fiscal_month).maybeSingle();
+  let res;
+  if(existing){
+    res=await sb.from('manager_validations').update(payload).eq('id',existing.id);
+  } else {
+    res=await sb.from('manager_validations').insert(payload);
+  }
+  if(res.error){ alert('❌ '+res.error.message); return; }
+
+  // Mark report as approved
+  const res2=await sb.from('monthly_reports').update({status:'approved'}).eq('id',rid);
+  if(res2.error){ alert('❌ '+res2.error.message); return; }
+
+  alert('✅ Approved สำเร็จ — เข้า ROI Dashboard แล้ว');
+  init();
+};
+
+window.rejectReport=async(rid)=>{
+  if(!confirm('Reject report นี้? พนักงานต้องกรอกใหม่')) return;
+  const cm=prompt('Comment ถึงพนักงาน:','');
+  if(cm===null) return;
+  await sb.from('monthly_reports').update({status:'rejected'}).eq('id',rid);
+  // Optional: save comment in validation
+  if(cm) {
+    await sb.from('manager_validations').upsert({
+      employee_id: REPORTS.find(r=>r.id===rid).employee_id,
+      fiscal_month: REPORTS.find(r=>r.id===rid).fiscal_month,
+      manager_name: ME.full_name,
+      approved: false,
+      manager_comment: cm,
+      ai_contribution_pct: 0
+    }, {onConflict:'employee_id,fiscal_month'});
+  }
+  alert('Rejected');
+  init();
+};
+
+async function logout(){
+  await sb.auth.signOut();
+  location.href='/login.html';
+}
+window.logout=logout;
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Login · efin AI ROI</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--bg:#0b1020;--panel:#151d3b;--panel2:#1a234a;--line:#27305a;--txt:#e8ecff;--mute:#9aa3c7;--accent:#5b8cff}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(1200px 700px at 80% -10%,#1d2862 0%,transparent 60%),radial-gradient(900px 600px at -10% 110%,#1c2a52 0%,transparent 60%),var(--bg);color:var(--txt);font-family:'IBM Plex Sans Thai',system-ui,sans-serif;min-height:100vh;display:grid;place-items:center;padding:24px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:36px 32px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+.brand{display:flex;align-items:center;gap:12px;margin-bottom:24px}
+.logo{width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,#6c8aff,#a855f7);display:grid;place-items:center;font-weight:700;font-size:18px}
+h1{font-size:20px;margin:0;font-weight:700}
+.sub{color:var(--mute);font-size:13px;margin-top:4px}
+label{display:block;color:var(--mute);font-size:12px;margin-bottom:6px;margin-top:18px}
+input{width:100%;padding:12px 14px;background:#0f1638;border:1px solid var(--line);color:var(--txt);border-radius:10px;font-family:inherit;font-size:14px;outline:none}
+input:focus{border-color:var(--accent)}
+button{width:100%;margin-top:20px;padding:12px;background:linear-gradient(135deg,#5b8cff,#7c3aed);color:#fff;border:0;border-radius:10px;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit}
+button:disabled{opacity:.5;cursor:wait}
+.msg{margin-top:16px;padding:12px;border-radius:8px;font-size:13px;line-height:1.5}
+.msg.success{background:#052e1c;color:#34d399;border:1px solid #14532d}
+.msg.error{background:#3f1212;color:#fca5a5;border:1px solid #7f1d1d}
+.msg.info{background:#1e3a8a;color:#93c5fd;border:1px solid #1e40af}
+.foot{margin-top:24px;color:var(--mute);font-size:11px;text-align:center;line-height:1.7}
+.foot a{color:var(--accent);text-decoration:none}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="brand">
+    <div class="logo">e</div>
+    <div><h1>efin AI ROI</h1><div class="sub">Login เพื่อกรอกข้อมูล</div></div>
+  </div>
+  <form id="form">
+    <label for="email">📧 Email บริษัท</label>
+    <input type="email" id="email" required placeholder="yourname@company.com" autocomplete="email" />
+    <button type="submit" id="btn">ส่ง Magic Link →</button>
+  </form>
+  <div id="msg" class="msg" style="display:none"></div>
+  <div class="foot">
+    หลังส่งฟอร์ม จะมี email ที่มีลิงก์ login ส่งไปให้<br>
+    คลิกลิงก์ → ระบบจะ login อัตโนมัติ ไม่ต้องจำ password<br><br>
+    📋 <a href="USER_GUIDE.md">คู่มือการใช้งาน</a>
+  </div>
+</div>
+<script>
+const SUPABASE_URL='https://vxcobdgptjcprexpktyd.supabase.co';
+const SUPABASE_KEY='sb_publishable_S5c-ncZ9JRoe_UVTJhCblg_J2hAnD5a';
+const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+// ถ้า login อยู่แล้ว → redirect ตาม role
+async function checkSession(){
+  const {data:{session}}=await sb.auth.getSession();
+  if(session){
+    const {data:emp}=await sb.from('employees').select('role').eq('user_id',session.user.id).maybeSingle();
+    if(emp){
+      const role=emp.role;
+      if(role==='hr_admin') location.href='/index.html';
+      else if(role==='manager') location.href='/manager.html';
+      else location.href='/employee.html';
+    }
+  }
+}
+checkSession();
+
+document.getElementById('form').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const email=document.getElementById('email').value.trim();
+  const btn=document.getElementById('btn');
+  const msg=document.getElementById('msg');
+  btn.disabled=true; btn.textContent='กำลังส่ง...';
+
+  // Pre-check ว่า email อยู่ใน employees ไหม
+  const {data:emp}=await sb.from('employees').select('id,full_name,role').eq('email',email.toLowerCase()).maybeSingle();
+  if(!emp){
+    msg.className='msg error';
+    msg.style.display='block';
+    msg.innerHTML=`❌ ไม่พบ ${email} ในระบบ — โปรดติดต่อ HR`;
+    btn.disabled=false; btn.textContent='ส่ง Magic Link →';
+    return;
+  }
+
+  const {error}=await sb.auth.signInWithOtp({
+    email,
+    options:{ emailRedirectTo: location.origin+'/login.html' }
+  });
+
+  if(error){
+    msg.className='msg error';
+    msg.style.display='block';
+    msg.textContent='❌ '+error.message;
+    btn.disabled=false; btn.textContent='ลองอีกครั้ง';
+  } else {
+    msg.className='msg success';
+    msg.style.display='block';
+    msg.innerHTML=`✅ <b>${emp.full_name}</b><br>ส่งลิงก์ไปที่ ${email} แล้ว<br>เปิด email + คลิกลิงก์ → กลับมาที่นี่จะ login อัตโนมัติ`;
+    btn.style.display='none';
+  }
+});
+</script>
+</body>
+</html>

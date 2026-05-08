@@ -840,15 +840,9 @@ function init() {
   rerenderAll();
 }
 
-(async () => {
-  try {
-    STATE.data = await loadData();
-    init();
-  } catch (err) {
-    document.getElementById('app').innerHTML = `<div style="padding:40px;color:#ef4444">โหลดข้อมูลล้มเหลว: ${err.message}</div>`;
-    console.error(err);
-  }
-})();
-</script>
-</body>
-</html>
+// ============ Auth Gate ============
+async function requireHrAdmin() {
+  const {data:{session}} = await sb.auth.getSession();
+  if (!session) { location.href = '/login.html'; return null; }
+  const {data:emp} = await sb.from('employees').select('*').eq('user_id', session.user.id).maybeSingle();
+  if (!emp) {

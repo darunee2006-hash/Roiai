@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>กรอก Monthly Report · efin AI ROI</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--bg:#0b1020;--panel:#151d3b;--panel2:#1a234a;--line:#27305a;--txt:#e8ecff;--mute:#9aa3c7;--accent:#5b8cff;--green:#22c55e;--red:#ef4444;--yellow:#eab308}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(1200px 700px at 80% -10%,#1d2862 0%,transparent 60%),var(--bg);color:var(--txt);font-family:'IBM Plex Sans Thai',system-ui,sans-serif;min-height:100vh}
+.container{max-width:900px;margin:0 auto;padding:24px}
+.hero{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#6c8aff,#a855f7);display:grid;place-items:center;font-weight:700}
+h1{font-size:18px;margin:0;font-weight:700}
+.sub{color:var(--mute);font-size:12px}
+.user-pill{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);padding:6px 12px;border-radius:999px;font-size:12px}
+.user-pill .dot{width:8px;height:8px;border-radius:50%;background:#22c55e}
+.btn-logout{background:transparent;border:1px solid var(--line);color:var(--mute);padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer;font-family:inherit}
+.btn-logout:hover{color:var(--red);border-color:var(--red)}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:24px;margin-bottom:20px}
+h2{font-size:16px;margin:0 0 4px;font-weight:600}
+.card .desc{color:var(--mute);font-size:13px;margin-bottom:18px}
+
+.grid{display:grid;gap:16px;grid-template-columns:repeat(2,1fr)}
+@media(max-width:680px){.grid{grid-template-columns:1fr}}
+label{display:block;color:var(--mute);font-size:12px;margin-bottom:5px;margin-top:0}
+.req{color:var(--red)}
+input,select,textarea{width:100%;padding:10px 12px;background:#0f1638;border:1px solid var(--line);color:var(--txt);border-radius:8px;font-family:inherit;font-size:13px;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+textarea{resize:vertical;min-height:60px}
+.helper{color:var(--mute);font-size:11px;margin-top:3px}
+
+.calc-box{background:var(--panel2);border:1px solid var(--accent);border-radius:10px;padding:14px;margin-top:14px}
+.calc-box .label{color:var(--accent);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.calc-box .value{font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace;margin-top:4px}
+.calc-box .hint{color:var(--mute);font-size:11px;margin-top:4px}
+
+.actions{display:flex;gap:10px;margin-top:24px;flex-wrap:wrap}
+button.primary{background:linear-gradient(135deg,#5b8cff,#7c3aed);color:#fff;border:0;padding:12px 24px;border-radius:10px;font-weight:600;font-size:13px;cursor:pointer;font-family:inherit;flex:1}
+button.secondary{background:var(--panel2);border:1px solid var(--line);color:var(--txt);padding:12px 24px;border-radius:10px;font-weight:500;font-size:13px;cursor:pointer;font-family:inherit}
+button:disabled{opacity:.5;cursor:wait}
+
+.msg{margin-top:16px;padding:12px;border-radius:8px;font-size:13px;line-height:1.5}
+.msg.success{background:#052e1c;color:#34d399;border:1px solid #14532d}
+.msg.error{background:#3f1212;color:#fca5a5;border:1px solid #7f1d1d}
+.msg.info{background:#1e3a8a;color:#93c5fd;border:1px solid #1e40af}
+
+.history{margin-top:30px}
+.history h3{font-size:14px;margin-bottom:10px;color:var(--mute);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+.report-row{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:10px;display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center}
+.badge{display:inline-block;font-size:10px;padding:2px 8px;border-radius:999px;font-weight:600}
+.badge.pending{background:#3f2c0a;color:#fde68a}
+.badge.approved{background:#052e1c;color:#34d399}
+.badge.rejected{background:#3f1212;color:#fca5a5}
+.badge.draft{background:#1f2937;color:#94a3b8}
+
+.loading{display:grid;place-items:center;padding:60px;color:var(--mute)}
+.spin{width:36px;height:36px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;margin-bottom:12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+@media(max-width:680px){.kpi-strip{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;text-align:center}
+.kpi .lbl{color:var(--mute);font-size:10px;text-transform:uppercase;letter-spacing:.5px}
+.kpi .val{font-size:18px;font-weight:700;margin-top:4px}
+.kpi.green .val{color:#22c55e}.kpi.blue .val{color:#5b8cff}.kpi.purple .val{color:#a855f7}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="loading">
+    <div class="spin"></div>
+    <div>กำลังโหลด...</div>
+  </div>
+</div>
+
+<template id="tpl">
+<div class="container">
+  <div class="hero">
+    <div class="brand">
+      <div class="logo">e</div>
+      <div><h1>กรอก Monthly Report</h1><div class="sub">สำหรับพนักงาน</div></div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <div class="user-pill"><div class="dot"></div><span id="userName"></span></div>
+      <button class="btn-logout" onclick="logout()">ออกจากระบบ</button>
+    </div>
+  </div>
+
+  <div class="kpi-strip">
+    <div class="kpi blue"><div class="lbl">ฝ่าย</div><div class="val" id="kDept">—</div></div>
+    <div class="kpi purple"><div class="lbl">หัวหน้า</div><div class="val" id="kMgr" style="font-size:13px">—</div></div>
+    <div class="kpi green"><div class="lbl">Output ก่อน AI</div><div class="val" id="kOutBefore">—</div></div>
+    <div class="kpi blue"><div class="lbl">เวลาก่อน AI (ชม./ชิ้น)</div><div class="val" id="kTimeBefore">—</div></div>
+  </div>
+
+  <form id="reportForm" class="card">
+    <h2>📝 บันทึกผลงานเดือนนี้</h2>
+    <p class="desc">กรอกตัวเลขให้ตรงกับงานจริง · หลังกด "ส่ง" หัวหน้าจะ review และอนุมัติ</p>
+
+    <div class="grid">
+      <div>
+        <label>เดือนที่รายงาน <span class="req">*</span></label>
+        <input type="month" id="fiscal_month" required />
+      </div>
+      <div>
+        <label>AI Tool ที่ใช้ <span class="req">*</span></label>
+        <select id="ai_tool_used" required>
+          <option value="">-- เลือก --</option>
+          <option>Claude Code</option>
+          <option>Claude (Cowork)</option>
+          <option>Cursor</option>
+          <option>GitHub Copilot</option>
+          <option>Claude Code + Cursor</option>
+          <option>ChatGPT</option>
+          <option>Gemini</option>
+          <option>Canva AI</option>
+          <option value="-">ไม่ได้ใช้ AI เดือนนี้</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid" style="margin-top:14px">
+      <div>
+        <label>ระดับการใช้ AI <span class="req">*</span></label>
+        <select id="ai_group" required>
+          <option value="">-- เลือก --</option>
+          <option value="Champion">🏆 Champion (ใช้ทุกวัน · เก่ง)</option>
+          <option value="Adopter">🚀 Adopter (ใช้สม่ำเสมอ)</option>
+          <option value="Beginner">🌱 Beginner (เริ่มใช้)</option>
+          <option value="Non-User">⚪ Non-User (ไม่ใช้)</option>
+        </select>
+      </div>
+      <div>
+        <label>ใช้ AI กี่วัน/สัปดาห์ <span class="req">*</span></label>
+        <input type="number" id="usage_days_per_week" min="0" max="7" required value="0" />
+      </div>
+    </div>
+
+    <div class="grid" style="margin-top:14px">
+      <div>
+        <label>📦 จำนวน Output เดือนนี้ <span class="req">*</span></label>
+        <input type="number" id="output_after" min="0" step="0.1" required placeholder="เช่น 32" />
+        <div class="helper" id="hOut">เปรียบเทียบกับก่อน AI</div>
+      </div>
+      <div>
+        <label>⏱ เวลาต่อชิ้น (ชม.) <span class="req">*</span></label>
+        <input type="number" id="time_per_output_after" min="0" step="0.1" required placeholder="เช่น 1.5" />
+        <div class="helper" id="hTime">หลังใช้ AI ใช้เวลาเท่าไรต่อชิ้น</div>
+      </div>
+    </div>
+
+    <div class="calc-box" id="calcBox">
+      <div class="label">⏱ ชั่วโมงที่ประหยัดได้/เดือน (auto-calc)</div>
+      <div class="value" id="hoursSavedDisplay">— ชม.</div>
+      <div class="hint" id="hoursSavedHint">= (เวลาก่อน − เวลาหลัง) × Output หลัง</div>
+    </div>
+
+    <div style="margin-top:14px">
+      <label>📎 ลิงก์หลักฐาน (1 บรรทัดต่อ 1 ลิงก์)</label>
+      <textarea id="evidence" rows="3" placeholder="https://drive.google.com/...&#10;https://github.com/...&#10;ลิงก์ตัวอย่างงานที่ AI ช่วย"></textarea>
+      <div class="helper">ใส่ลิงก์งาน · prompt · screenshot ที่ใช้ AI ทำ — ช่วยให้หัวหน้า validate ง่ายขึ้น</div>
+    </div>
+
+    <div class="grid" style="margin-top:14px">
+      <div>
+        <label>⭐ Self Rating (1-5)</label>
+        <input type="number" id="self_rating" min="1" max="5" step="0.5" value="3" />
+      </div>
+      <div>
+        <label>ครั้ง/สัปดาห์ที่ใช้ AI</label>
+        <input type="number" id="usage_freq_per_week" min="0" placeholder="เช่น 15" />
+      </div>
+    </div>
+
+    <div style="margin-top:14px">
+      <label>💬 Comment เพิ่มเติม</label>
+      <textarea id="comment" rows="2" placeholder="งานที่ AI ช่วยมากที่สุด · ปัญหาที่เจอ · ฯลฯ"></textarea>
+    </div>
+
+    <div class="actions">
+      <button type="button" class="secondary" onclick="saveDraft()">บันทึก Draft</button>
+      <button type="submit" class="primary">ส่งให้หัวหน้า Review →</button>
+    </div>
+    <div id="msg" class="msg" style="display:none"></div>
+  </form>
+
+  <div class="history">
+    <h3>📂 ประวัติรายงานของฉัน</h3>
+    <div id="historyList"><div class="report-row"><div></div><div class="sub">ยังไม่มีรายงาน</div><div></div></div></div>
+  </div>
+
+  <div style="text-align:center;margin-top:30px;color:var(--mute);font-size:11px">
+    efin AI ROI Framework · กรอกข้อมูลให้ครบทุกเดือน เพื่อให้ระบบคำนวณ ROI ของคุณได้แม่นยำ
+  </div>
+</div>
+</template>
+
+<script>
+const SUPABASE_URL='https://vxcobdgptjcprexpktyd.supabase.co';
+const SUPABASE_KEY='sb_publishable_S5c-ncZ9JRoe_UVTJhCblg_J2hAnD5a';
+const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+let ME=null, BASELINE=null, MGR=null;
+
+async function init(){
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){ location.href='/login.html'; return; }
+
+  const {data:emp,error}=await sb.from('employees').select('*').eq('user_id',session.user.id).maybeSingle();
+  if(error||!emp){
+    document.getElementById('app').innerHTML='<div style="padding:60px;text-align:center;color:#ef4444">บัญชี '+session.user.email+' ไม่ผูกกับพนักงาน — โปรดติดต่อ HR</div>';
+    return;
+  }
+  ME=emp;
+
+  // role-based redirect
+  if(emp.role==='hr_admin'){ location.href='/index.html'; return; }
+  if(emp.role==='manager'){ /* manager ก็ยังกรอกได้ของตัวเอง — แต่มี link ไป /manager.html ด้วย */ }
+
+  // Get baseline
+  const {data:bl}=await sb.from('baseline').select('*').eq('employee_id',emp.id).order('measured_month',{ascending:false}).limit(1).maybeSingle();
+  BASELINE=bl;
+
+  // Get manager
+  if(emp.manager_emp_id){
+    const {data:mgr}=await sb.from('employees').select('full_name').eq('id',emp.manager_emp_id).maybeSingle();
+    MGR=mgr;
+  }
+
+  document.getElementById('app').innerHTML=document.getElementById('tpl').innerHTML;
+  document.getElementById('userName').textContent=emp.full_name+(emp.role==='manager'?' (Manager)':'');
+  document.getElementById('kDept').textContent=emp.department;
+  document.getElementById('kMgr').textContent=MGR?.full_name||'—';
+  document.getElementById('kOutBefore').textContent=BASELINE?BASELINE.output_before:'—';
+  document.getElementById('kTimeBefore').textContent=BASELINE?BASELINE.time_per_output_before:'—';
+
+  // default fiscal month = current
+  const now=new Date();
+  document.getElementById('fiscal_month').value=now.toISOString().slice(0,7);
+
+  // Manager link
+  if(emp.role==='manager'){
+    const link=document.createElement('a');
+    link.href='/manager.html';
+    link.textContent='→ ไปหน้า Validate ลูกทีม';
+    link.style.cssText='display:block;margin-top:10px;color:#a855f7;font-size:13px;text-decoration:none;text-align:center';
+    document.querySelector('.hero').appendChild(link);
+  }
+
+  // Auto-calc hours saved
+  const $out=document.getElementById('output_after');
+  const $time=document.getElementById('time_per_output_after');
+  const $disp=document.getElementById('hoursSavedDisplay');
+  const $hint=document.getElementById('hoursSavedHint');
+  const calc=()=>{
+    const out=parseFloat($out.value)||0;
+    const time=parseFloat($time.value)||0;
+    if(!BASELINE||!out||time<=0){ $disp.textContent='— ชม.'; return; }
+    const saved=Math.max(0,(BASELINE.time_per_output_before-time)*out);
+    $disp.textContent=saved.toFixed(1)+' ชม.';
+    const pct=BASELINE.time_per_output_before>0?((BASELINE.time_per_output_before-time)/BASELINE.time_per_output_before*100):0;
+    $hint.textContent=`= (${BASELINE.time_per_output_before} − ${time}) × ${out} = ประหยัดเวลา ${pct.toFixed(0)}%`;
+  };
+  $out.addEventListener('input',calc);
+  $time.addEventListener('input',calc);
+
+  // Submit form
+  document.getElementById('reportForm').addEventListener('submit',e=>{e.preventDefault();submitReport('pending')});
+  loadHistory();
+}
+
+async function submitReport(status){
+  const $btn=document.querySelector('.primary');
+  const orig=$btn.textContent;
+  $btn.disabled=true; $btn.textContent='กำลังบันทึก...';
+  const $msg=document.getElementById('msg');
+
+  const fiscal_month=document.getElementById('fiscal_month').value;
+  const output_after=parseFloat(document.getElementById('output_after').value);
+  const time_after=parseFloat(document.getElementById('time_per_output_after').value);
+  const hours_saved=BASELINE?Math.max(0,(BASELINE.time_per_output_before-time_after)*output_after):0;
+  const evidenceText=document.getElementById('evidence').value;
+  const evidence_links=evidenceText.split('\n').map(s=>s.trim()).filter(Boolean);
+
+  const payload={
+    employee_id: ME.id,
+    fiscal_month: fiscal_month.length===7?fiscal_month:fiscal_month.slice(0,7),
+    ai_tool_used: document.getElementById('ai_tool_used').value,
+    ai_group: document.getElementById('ai_group').value,
+    usage_days_per_week: parseInt(document.getElementById('usage_days_per_week').value)||0,
+    usage_freq_per_week: parseInt(document.getElementById('usage_freq_per_week').value)||0,
+    main_task: ME.main_task,
+    output_after, time_per_output_after: time_after, hours_saved,
+    self_rating: parseFloat(document.getElementById('self_rating').value)||null,
+    comment: document.getElementById('comment').value||null,
+    evidence_links,
+    status,
+    submitted_at: new Date().toISOString()
+  };
+
+  // Upsert: เดือนเดียวกัน → update
+  const {data:existing}=await sb.from('monthly_reports').select('id,status').eq('employee_id',ME.id).eq('fiscal_month',payload.fiscal_month).maybeSingle();
+  let result;
+  if(existing){
+    if(existing.status==='approved'){ alert('เดือนนี้ approved แล้ว แก้ไขไม่ได้'); $btn.disabled=false; $btn.textContent=orig; return; }
+    result=await sb.from('monthly_reports').update(payload).eq('id',existing.id);
+  } else {
+    result=await sb.from('monthly_reports').insert(payload);
+  }
+
+  if(result.error){
+    $msg.className='msg error'; $msg.style.display='block';
+    $msg.textContent='❌ '+result.error.message;
+  } else {
+    $msg.className='msg success'; $msg.style.display='block';
+    $msg.innerHTML=status==='draft'?'💾 บันทึก Draft แล้ว · กลับมาแก้ภายหลังได้':'✅ ส่งให้หัวหน้า '+(MGR?.full_name||'')+ ' review แล้ว · จะแสดงใน Dashboard เมื่อ approve';
+    loadHistory();
+    document.getElementById('reportForm').reset();
+    const now=new Date();
+    document.getElementById('fiscal_month').value=now.toISOString().slice(0,7);
+  }
+  $btn.disabled=false; $btn.textContent=orig;
+}
+window.saveDraft=()=>submitReport('draft');
+
+async function loadHistory(){
+  const {data}=await sb.from('monthly_reports').select('*').eq('employee_id',ME.id).order('fiscal_month',{ascending:false}).limit(12);
+  if(!data||data.length===0){
+    document.getElementById('historyList').innerHTML='<div class="report-row"><div></div><div class="sub" style="color:var(--mute)">ยังไม่มีรายงาน</div><div></div></div>';
+    return;
+  }
+  document.getElementById('historyList').innerHTML=data.map(r=>{
+    const badgeMap={pending:'pending',approved:'approved',rejected:'rejected',draft:'draft'};
+    const labels={pending:'⏳ รอ Validate',approved:'✅ Approved',rejected:'❌ Rejected',draft:'💾 Draft'};
+    return `<div class="report-row">
+      <div style="font-family:'JetBrains Mono';font-size:12px;color:var(--mute)">${r.fiscal_month}</div>
+      <div>
+        <div style="font-size:13px"><b>${r.ai_tool_used||'-'}</b> · ${r.ai_group} · Output ${r.output_after} · ${r.time_per_output_after}h/ชิ้น</div>
+        <div class="sub" style="color:var(--mute);font-size:11px;margin-top:2px">ประหยัดเวลา ${(r.hours_saved||0).toFixed(0)} ชม. · ${r.usage_days_per_week} วัน/สัปดาห์</div>
+      </div>
+      <div><span class="badge ${badgeMap[r.status]}">${labels[r.status]}</span></div>
+    </div>`;
+  }).join('');
+}
+
+async function logout(){
+  await sb.auth.signOut();
+  location.href='/login.html';
+}
+window.logout=logout;
+init();
+</script>
+</body>
+</html>
