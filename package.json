@@ -1,0 +1,11 @@
+{
+  "name": "efin-ai-roi",
+  "version": "1.0.0",
+  "description": "efin AI Productivity & ROI Evaluation Framework — Live dashboard powered by Supabase",
+  "private": true,
+  "scripts": {
+    "dev": "npx serve .",
+    "build": "echo 'Static site - no build needed'"
+  },
+  "keywords": ["efin", "ai", "roi", "dashboard", "supabase"]
+}

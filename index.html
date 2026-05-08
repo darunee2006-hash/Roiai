@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>efin · AI Productivity & ROI Evaluation Framework</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --bg:#0b1020; --bg2:#111935; --panel:#151d3b; --panel2:#1a234a;
+  --line:#27305a; --txt:#e8ecff; --mute:#9aa3c7; --accent:#5b8cff;
+  --green:#22c55e; --red:#ef4444; --yellow:#eab308; --orange:#f97316;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--txt);font-family:'IBM Plex Sans Thai',system-ui,-apple-system,sans-serif;font-size:14px;line-height:1.55}
+body{background:radial-gradient(1200px 700px at 80% -10%,#1d2862 0%,transparent 60%),radial-gradient(900px 600px at -10% 110%,#1c2a52 0%,transparent 60%),var(--bg);min-height:100vh}
+.mono{font-family:'JetBrains Mono',monospace}
+
+.container{max-width:1320px;margin:0 auto;padding:24px}
+.hero{display:flex;align-items:center;justify-content:space-between;gap:24px;margin-bottom:24px;flex-wrap:wrap}
+.hero h1{font-size:24px;font-weight:700;margin:0}
+.hero .sub{color:var(--mute);font-size:13px;margin-top:4px}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,#6c8aff,#a855f7);display:grid;place-items:center;font-weight:700;font-size:18px}
+.live-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block;animation:pulse 2s infinite;margin-right:6px}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+.tabs{display:flex;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px;flex-wrap:wrap}
+.tab{padding:8px 14px;border-radius:8px;color:var(--mute);cursor:pointer;font-weight:500;font-size:13px;white-space:nowrap;transition:.15s}
+.tab:hover{color:var(--txt);background:var(--panel2)}
+.tab.active{background:linear-gradient(135deg,#5b8cff,#7c3aed);color:#fff}
+
+.grid{display:grid;gap:16px}
+.kpi-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;position:relative;overflow:hidden}
+.kpi .label{color:var(--mute);font-size:12px;text-transform:uppercase;letter-spacing:.6px}
+.kpi .value{font-size:28px;font-weight:700;margin-top:4px}
+.kpi .delta{font-size:12px;margin-top:6px;color:var(--mute)}
+.kpi .delta.up{color:var(--green)}.kpi .delta.down{color:var(--red)}
+.kpi.accent{background:linear-gradient(135deg,#1f2a5f,#251a4a);border-color:#3b3680}
+.kpi .icon{position:absolute;top:14px;right:14px;font-size:22px;opacity:.4}
+
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;overflow:hidden}
+.panel h3{margin:0 0 12px;font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px}
+.panel h3 .pill{font-size:11px;background:var(--panel2);padding:3px 8px;border-radius:6px;color:var(--mute);font-weight:500}
+
+.badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:999px;font-weight:600}
+.badge.champion{background:#3b1c5c;color:#d8b4fe}
+.badge.adopter{background:#1e3a8a;color:#93c5fd}
+.badge.beginner{background:#3f2c0a;color:#fde68a}
+.badge.nonuser{background:#1f2937;color:#94a3b8}
+.badge.tier-excellent{background:#052e1c;color:#34d399}
+.badge.tier-good{background:#172554;color:#60a5fa}
+.badge.tier-fair{background:#3f2c0a;color:#fbbf24}
+.badge.tier-poor{background:#3f1212;color:#fca5a5}
+.badge.tier-wasted{background:#3f3f1d;color:#fde047}
+
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+th{color:var(--mute);font-weight:500;text-transform:uppercase;font-size:11px;letter-spacing:.4px}
+tr:hover td{background:rgba(91,140,255,.04)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;font-family:'JetBrains Mono',monospace}
+
+.input,select,input[type=text],input[type=number],input[type=search]{
+  background:var(--bg2);border:1px solid var(--line);color:var(--txt);
+  padding:8px 10px;border-radius:8px;font-family:inherit;font-size:13px;outline:none;
+}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+label{color:var(--mute);font-size:12px}
+
+section{display:none}
+section.active{display:block}
+
+.group-grid{grid-template-columns:repeat(4,1fr)}
+.group-card{padding:18px;border-radius:14px;border:1px solid var(--line);text-align:center}
+.group-card .name{font-weight:700;font-size:14px}
+.group-card .count{font-size:32px;font-weight:700;margin-top:8px}
+.group-card .pct{color:var(--mute);font-size:12px}
+.group-card.champion{background:linear-gradient(135deg,#3b1c5c,#2a1547);border-color:#7e22ce}
+.group-card.adopter{background:linear-gradient(135deg,#1e3a8a,#172554);border-color:#1d4ed8}
+.group-card.beginner{background:linear-gradient(135deg,#3f2c0a,#2a1d05);border-color:#a16207}
+.group-card.nonuser{background:linear-gradient(135deg,#1f2937,#111827);border-color:#475569}
+
+.chart-box{position:relative;height:300px}
+.chart-box.tall{height:380px}
+
+.mt-12{margin-top:12px}.mt-16{margin-top:16px}.mt-24{margin-top:24px}
+.cols-2{grid-template-columns:repeat(2,1fr)}.cols-3{grid-template-columns:repeat(3,1fr)}.cols-4{grid-template-columns:repeat(4,1fr)}
+.text-mute{color:var(--mute)}.flex-1{flex:1}.small{font-size:12px}
+
+.roi-band{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:10px;background:var(--panel2);margin-bottom:8px}
+.roi-band .dot{width:10px;height:10px;border-radius:50%}
+.roi-band .text{flex:1}
+.roi-band .text .h{font-weight:600;font-size:13px}
+.roi-band .text .s{color:var(--mute);font-size:11px}
+.roi-band .count-pill{background:var(--bg2);border-radius:8px;padding:6px 10px;font-weight:700;font-family:'JetBrains Mono',monospace;font-size:13px}
+
+.method-card{padding:14px;background:var(--panel2);border-radius:10px;border-left:3px solid var(--accent)}
+.method-card.green{border-color:var(--green)}.method-card.yellow{border-color:var(--yellow)}.method-card.purple{border-color:#a855f7}.method-card.red{border-color:var(--red)}
+.method-card h4{margin:0 0 6px;font-size:13px;font-weight:600}
+.method-card p{margin:0;color:var(--mute);font-size:12px;line-height:1.6}
+.method-card .formula{background:#0a0f24;padding:8px 10px;border-radius:6px;margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#7dd3fc;border:1px solid #1e3a5f}
+
+.flow-step{display:grid;grid-template-columns:50px 1fr 130px;gap:14px;padding:12px;border-radius:10px;background:var(--panel2);margin-bottom:8px;align-items:center}
+.flow-step .num{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#5b8cff,#7c3aed);display:grid;place-items:center;font-weight:700;color:#fff}
+.flow-step h5{margin:0;font-size:13px;font-weight:600}
+.flow-step p{margin:2px 0 0;color:var(--mute);font-size:11px}
+.flow-step .owner{font-size:11px;color:var(--mute)}
+.flow-step .owner b{color:#93c5fd;display:block;font-size:12px}
+
+.exec-tbl{font-size:13px}
+.exec-tbl td{padding:8px 12px}
+.exec-tbl tr.total{background:linear-gradient(90deg,#1e3a8a30,#7c3aed30);font-weight:700}
+
+@media(max-width:980px){.kpi-grid,.group-grid,.cols-2,.cols-3,.cols-4{grid-template-columns:1fr}}
+
+footer{margin-top:36px;padding:18px;color:var(--mute);font-size:12px;text-align:center;border-top:1px solid var(--line)}
+
+.loading{display:grid;place-items:center;padding:60px;color:var(--mute)}
+.spinner{width:40px;height:40px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;margin-bottom:12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="container" id="app">
+  <div class="loading">
+    <div class="spinner"></div>
+    <div>กำลังโหลดข้อมูลจาก Supabase...</div>
+  </div>
+</div>
+
+<template id="tpl-app">
+<div>
+  <div class="hero">
+    <div class="brand">
+      <div class="logo">e</div>
+      <div>
+        <h1>AI Productivity &amp; ROI Evaluation Framework</h1>
+        <div class="sub"><span class="live-dot"></span>เชื่อม Supabase Live · efin Group · รอบ 90 วัน · เดือน 2026-04</div>
+      </div>
+    </div>
+    <div class="row">
+      <label>ฝ่าย</label>
+      <select id="filterDept" class="input"><option value="all">ทุกฝ่าย</option></select>
+      <label>กลุ่ม</label>
+      <select id="filterGroup" class="input">
+        <option value="all">ทั้งหมด</option>
+        <option value="Champion">Champion</option>
+        <option value="Adopter">Adopter</option>
+        <option value="Beginner">Beginner</option>
+        <option value="Non-User">Non-User</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <div class="tab active" data-tab="exec">📋 Executive Summary</div>
+    <div class="tab" data-tab="overview">📊 Overview</div>
+    <div class="tab" data-tab="aivsno">⚖️ AI vs Non-AI</div>
+    <div class="tab" data-tab="bydept">🏢 By Department</div>
+    <div class="tab" data-tab="employees">👥 Employees</div>
+    <div class="tab" data-tab="champions">🏆 Champion / Risk</div>
+    <div class="tab" data-tab="dataflow">🔄 Data Flow</div>
+    <div class="tab" data-tab="decision">🎯 Decision Tree</div>
+    <div class="tab" data-tab="methodology">📚 Methodology</div>
+  </div>
+
+  <!-- ============ EXECUTIVE SUMMARY ============ -->
+  <section id="sec-exec" class="active mt-24">
+    <div class="grid kpi-grid">
+      <div class="kpi accent"><div class="icon">💸</div><div class="label">AI ROI (Adjusted)</div><div class="value" id="kpi-roi">—</div><div class="delta" id="kpi-roi-text">—</div></div>
+      <div class="kpi"><div class="icon">💰</div><div class="label">Net Benefit / เดือน</div><div class="value" id="kpi-net">—</div><div class="delta" id="kpi-payback">—</div></div>
+      <div class="kpi"><div class="icon">⏱</div><div class="label">Hours Saved รวม</div><div class="value" id="kpi-hours">—</div><div class="delta">ทั้งองค์กร / เดือน</div></div>
+      <div class="kpi"><div class="icon">📈</div><div class="label">Active License Rate</div><div class="value" id="kpi-active">—</div><div class="delta" id="kpi-active-text">—</div></div>
+    </div>
+
+    <div class="panel mt-24">
+      <h3>📋 Executive Summary <span class="pill">เสนอผู้บริหาร</span></h3>
+      <table class="exec-tbl">
+        <tbody id="execTable"></tbody>
+      </table>
+    </div>
+
+    <div class="grid cols-2 mt-24">
+      <div class="panel">
+        <h3>4 กลุ่มพนักงาน</h3>
+        <div class="grid group-grid">
+          <div class="group-card champion"><div class="name">🏆 Champion</div><div class="count" id="grp-champion">0</div><div class="pct" id="grp-champion-pct">0%</div></div>
+          <div class="group-card adopter"><div class="name">🚀 Adopter</div><div class="count" id="grp-adopter">0</div><div class="pct" id="grp-adopter-pct">0%</div></div>
+          <div class="group-card beginner"><div class="name">🌱 Beginner</div><div class="count" id="grp-beginner">0</div><div class="pct" id="grp-beginner-pct">0%</div></div>
+          <div class="group-card nonuser"><div class="name">⚪ Non-User</div><div class="count" id="grp-nonuser">0</div><div class="pct" id="grp-nonuser-pct">0%</div></div>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>5 ROI Bands</h3>
+        <div class="roi-band"><div class="dot" style="background:var(--green)"></div><div class="text"><div class="h">&gt; 300% — คุ้มมาก</div><div class="s">ขยายผลทั้งทีม</div></div><div class="count-pill" id="band-1">0</div></div>
+        <div class="roi-band"><div class="dot" style="background:var(--accent)"></div><div class="text"><div class="h">100–300% — คุ้ม</div><div class="s">ใช้ต่อ + ปรับ process</div></div><div class="count-pill" id="band-2">0</div></div>
+        <div class="roi-band"><div class="dot" style="background:var(--yellow)"></div><div class="text"><div class="h">0–100% — เริ่มคุ้ม</div><div class="s">อบรมเพิ่ม</div></div><div class="count-pill" id="band-3">0</div></div>
+        <div class="roi-band"><div class="dot" style="background:var(--red)"></div><div class="text"><div class="h">ติดลบ — ยังไม่คุ้ม</div><div class="s">ทบทวน License</div></div><div class="count-pill" id="band-4">0</div></div>
+        <div class="roi-band" style="background:#3f3f1d20"><div class="dot" style="background:#fde047"></div><div class="text"><div class="h">License ไม่ใช้ — สูญเปล่า</div><div class="s">โอนหรือยกเลิก</div></div><div class="count-pill" id="band-5">0</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ OVERVIEW ============ -->
+  <section id="sec-overview" class="mt-24">
+    <div class="grid cols-2">
+      <div class="panel"><h3>มูลค่าผลประโยชน์ตามฝ่าย <span class="pill">บาท / เดือน</span></h3><div class="chart-box"><canvas id="chartDeptValue"></canvas></div></div>
+      <div class="panel"><h3>Productivity Multiplier ตามฝ่าย</h3><div class="chart-box"><canvas id="chartProdImp"></canvas></div></div>
+    </div>
+    <div class="grid cols-2 mt-24">
+      <div class="panel"><h3>AI Adoption Rate ตามฝ่าย</h3><div class="chart-box"><canvas id="chartAdoption"></canvas></div></div>
+      <div class="panel"><h3>Quality (Error Rate %)</h3><div class="chart-box"><canvas id="chartQuality"></canvas></div></div>
+    </div>
+  </section>
+
+  <!-- ============ AI vs Non-AI ============ -->
+  <section id="sec-aivsno" class="mt-24">
+    <div class="grid cols-2">
+      <div class="panel"><h3>AI Users vs Non-Users <span class="pill">เฉลี่ย</span></h3><div class="chart-box"><canvas id="chartAiVsNo"></canvas></div></div>
+      <div class="panel"><h3>Time-to-Complete <span class="pill">ชม. / หน่วยงาน</span></h3><div class="chart-box"><canvas id="chartTime"></canvas></div></div>
+    </div>
+    <div class="panel mt-24">
+      <h3>Pair-wise Comparison ตามฝ่าย <span class="pill">งานคล้ายกัน เพื่อความยุติธรรม</span></h3>
+      <div id="pairwise"></div>
+    </div>
+  </section>
+
+  <!-- ============ By Department ============ -->
+  <section id="sec-bydept" class="mt-24">
+    <div class="panel">
+      <h3>Department Scorecard</h3>
+      <div style="overflow-x:auto">
+      <table id="deptTable">
+        <thead><tr>
+          <th>ฝ่าย</th><th class="num">Headcount</th><th class="num">AI Users</th><th class="num">Adoption %</th>
+          <th class="num">Avg Multiplier</th><th class="num">Avg AI Contrib %</th>
+          <th class="num">Total Benefit</th><th class="num">Adjusted Benefit</th><th class="num">Cost</th>
+          <th class="num">ROI %</th><th>Verdict</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+      </div>
+    </div>
+    <div class="grid cols-2 mt-24">
+      <div class="panel"><h3>ROI ตามฝ่าย</h3><div class="chart-box tall"><canvas id="chartDeptROI"></canvas></div></div>
+      <div class="panel"><h3>Headcount Mix ตามฝ่าย</h3><div class="chart-box tall"><canvas id="chartDeptMix"></canvas></div></div>
+    </div>
+  </section>
+
+  <!-- ============ EMPLOYEES ============ -->
+  <section id="sec-employees" class="mt-24">
+    <div class="panel">
+      <h3>Employee Detail · ROI รายบุคคล <span class="pill" id="empCount">0 คน</span></h3>
+      <div class="row" style="margin-bottom:12px">
+        <input type="search" id="empSearch" class="input flex-1" placeholder="🔍 ค้นหา..."/>
+        <label class="small">เรียง</label>
+        <select id="empSort" class="input">
+          <option value="roi_desc">Adjusted ROI สูง→ต่ำ</option>
+          <option value="roi_asc">Adjusted ROI ต่ำ→สูง</option>
+          <option value="value_desc">Benefit สูง→ต่ำ</option>
+          <option value="contrib_desc">AI Contrib % สูง→ต่ำ</option>
+          <option value="dept">ฝ่าย</option>
+        </select>
+      </div>
+      <div style="overflow-x:auto;max-height:680px">
+      <table id="empTable">
+        <thead><tr>
+          <th>#</th><th>ชื่อ-ตำแหน่ง</th><th>ฝ่าย</th><th>Group</th><th>AI Tool</th>
+          <th class="num">เงินเดือน</th><th class="num">Out Δ</th><th class="num">Hrs Saved</th>
+          <th class="num">Total Benefit</th><th class="num">AI Contrib%</th>
+          <th class="num">Adj Benefit</th><th class="num">Cost</th><th class="num">Adj ROI %</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CHAMPIONS / RISK ============ -->
+  <section id="sec-champions" class="mt-24">
+    <div class="grid cols-2">
+      <div class="panel"><h3>🏆 AI Champion List</h3><div id="championList"></div></div>
+      <div class="panel"><h3>⚠️ Non-Adoption Risk + Wasted License</h3><div id="riskList"></div></div>
+    </div>
+    <div class="panel mt-24">
+      <h3>🎯 Recommended Actions ตามกลุ่ม</h3>
+      <div class="grid cols-4 gap-16">
+        <div class="method-card purple"><h4>🏆 Champion</h4><p>ROI สูง · Reward · ตั้งเป็นต้นแบบ · Mentor role · เลื่อนตำแหน่ง</p></div>
+        <div class="method-card"><h4>🚀 Adopter</h4><p>อบรมเพิ่ม · Use case ใหม่ · จับคู่กับ Champion</p></div>
+        <div class="method-card yellow"><h4>🌱 Beginner</h4><p>Workshop · Prompt template · 1:1 coaching</p></div>
+        <div class="method-card red"><h4>⚪ Non-User</h4><p>Pilot 30 วัน · ถ้าไม่ขยับ → PIP 90 วัน · โอน License</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ DATA FLOW ============ -->
+  <section id="sec-dataflow" class="mt-24">
+    <div class="panel">
+      <h3>🔄 Monthly Data Collection Flow <span class="pill">11 ขั้นตอน</span></h3>
+      <div id="flowSteps"></div>
+    </div>
+    <div class="panel mt-24">
+      <h3>📅 Monthly Cycle (รอบ 30 วัน)</h3>
+      <table>
+        <thead><tr><th>วันที่</th><th>ผู้รับผิดชอบ</th><th>กิจกรรม</th></tr></thead>
+        <tbody>
+          <tr><td>1–3</td><td>Finance / IT</td><td>อัปเดตต้นทุน AI + จำนวน License</td></tr>
+          <tr><td>4–7</td><td>HR</td><td>ส่งฟอร์มให้พนักงาน</td></tr>
+          <tr><td>8–12</td><td>พนักงาน</td><td>กรอกผลงาน + การใช้ AI + แนบหลักฐาน</td></tr>
+          <tr><td>13–17</td><td>หัวหน้า</td><td>Validate + AI Contribution %</td></tr>
+          <tr><td>18–22</td><td>HR / Data</td><td>คำนวณ ROI</td></tr>
+          <tr><td>23–25</td><td>HR / Mgmt</td><td>Review Dashboard</td></tr>
+          <tr><td>26–30</td><td>ผู้บริหาร</td><td>ตัดสินใจ ต่อ/ขยาย/ลด/เปลี่ยน Tool</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ DECISION TREE ============ -->
+  <section id="sec-decision" class="mt-24">
+    <div class="panel">
+      <h3>🎯 Decision Tree หลังได้ผล ROI</h3>
+      <div class="grid cols-2 gap-16">
+        <div class="method-card green"><h4>ROI สูง + ใช้งานจริง</h4><p>→ ขยาย License · ตั้งเป็น AI Champion · ทำเป็น playbook ให้ทีมอื่น</p></div>
+        <div class="method-card"><h4>ROI กลาง + ใช้งานจริง</h4><p>→ อบรมเพิ่ม · Prompt template · ปรับ Use Case</p></div>
+        <div class="method-card yellow"><h4>ROI ต่ำ + ใช้งานน้อย</h4><p>→ ตรวจ Tool ไม่เหมาะ หรือคนใช้ไม่เป็น · เปลี่ยน tool / coaching</p></div>
+        <div class="method-card red"><h4>ROI ติดลบ + ไม่ใช้งาน</h4><p>→ ยกเลิก License · โอน License ให้คนอื่น</p></div>
+        <div class="method-card purple" style="grid-column:span 2"><h4>ROI สูงเฉพาะบางทีม</h4><p>→ ใช้ทีมนั้นเป็น Pilot Model สอนทีมอื่น · ขยาย rollout ตามผลจริง</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ METHODOLOGY ============ -->
+  <section id="sec-methodology" class="mt-24">
+    <div class="grid cols-2 gap-16">
+      <div class="panel">
+        <h3>🧮 สูตรคำนวณ</h3>
+        <div class="method-card">
+          <p><b>Hourly Rate</b></p>
+          <div class="formula">Salary or People Cost ÷ 176 hr</div>
+          <p style="margin-top:8px"><b>Hours Saved</b></p>
+          <div class="formula">(Time Before − Time After) × Output After</div>
+          <p style="margin-top:8px"><b>Value Saved</b></p>
+          <div class="formula">Hours Saved × Hourly Rate</div>
+          <p style="margin-top:8px"><b>Total Benefit</b></p>
+          <div class="formula">Value Saved + Added Revenue + Cost Reduction</div>
+          <p style="margin-top:8px"><b>Adjusted Benefit (ยุติธรรม)</b></p>
+          <div class="formula">Total Benefit × AI Contribution %</div>
+          <p style="margin-top:8px"><b>Adjusted ROI</b></p>
+          <div class="formula">(Adjusted Benefit − AI Cost) ÷ AI Cost × 100</div>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>📐 AI Contribution %</h3>
+        <p class="text-mute small">หัวหน้าประเมินว่าผลลัพธ์เกิดจาก AI กี่ % เพื่อกัน revenue/output ที่อาจมาจากปัจจัยอื่น</p>
+        <table class="small">
+          <tr><td>100%</td><td>เกิดจาก AI ทั้งหมด</td></tr>
+          <tr><td>70%</td><td>AI มีส่วนหลัก</td></tr>
+          <tr><td>50%</td><td>AI ช่วยครึ่งหนึ่ง</td></tr>
+          <tr><td>30%</td><td>AI ช่วยบางส่วน</td></tr>
+          <tr><td>0%</td><td>ไม่เกี่ยวกับ AI</td></tr>
+        </table>
+      </div>
+      <div class="panel">
+        <h3>📊 KPI ที่ใช้</h3>
+        <ul class="small text-mute" style="line-height:2">
+          <li><b>AI Adoption Rate</b> = ใช้ AI ÷ ทั้งหมด</li>
+          <li><b>Active License Rate</b> = ใช้จริง ÷ License ที่ซื้อ</li>
+          <li><b>Time Saving Rate</b> = Hours Saved ÷ Baseline Hours</li>
+          <li><b>Productivity Improvement</b> = (Out หลัง − ก่อน) ÷ ก่อน</li>
+          <li><b>Quality Improvement</b> = Error ลดลง %</li>
+          <li><b>AI Value per Employee</b> = Total Benefit ÷ AI Users</li>
+          <li><b>Non-Usage Cost</b> = License ไม่ใช้ × Cost per License</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3>🔒 4 ชั้นตรวจสอบ ป้องกันกรอกเกินจริง</h3>
+        <ul class="small text-mute" style="line-height:1.9">
+          <li>1. <b>Self Report</b> — พนักงานกรอก</li>
+          <li>2. <b>Manager Validate</b> — หัวหน้ายืนยัน</li>
+          <li>3. <b>Evidence</b> — แนบไฟล์/ลิงก์</li>
+          <li>4. <b>System Data</b> — เทียบกับ Jira/GA/CRM/HRIS</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    efin AI Productivity & ROI Evaluation Framework · Powered by Supabase + Vercel · ระบบนี้แยกออกจาก HR System
+  </footer>
+</div>
+</template>
+
+<script>
+// =========================================
+// Supabase config
+// =========================================
+const SUPABASE_URL = 'https://vxcobdgptjcprexpktyd.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_S5c-ncZ9JRoe_UVTJhCblg_J2hAnD5a';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const STATE = {
+  hours: 176, period: 3, trainCost: 5000, amort: 12,
+  filterDept: 'all', filterGroup: 'all',
+  data: null, charts: {}
+};
+
+const FMT = {
+  thb: v => '฿' + Math.round(v).toLocaleString('th-TH'),
+  thbK: v => v >= 1e6 ? '฿'+(v/1e6).toFixed(2)+'M' : v >= 1e3 ? '฿'+(v/1e3).toFixed(0)+'K' : '฿'+Math.round(v),
+  pct: v => (v*100).toFixed(1)+'%',
+  pct1: v => v.toFixed(1)+'%',
+  num: v => Number(v).toLocaleString('th-TH', {maximumFractionDigits:1}),
+};
+
+// =========================================
+// Load data from Supabase
+// =========================================
+async function loadData() {
+  const [emps, baselines, reports, vals] = await Promise.all([
+    supabase.from('employees').select('*').order('id'),
+    supabase.from('baseline').select('*'),
+    supabase.from('monthly_reports').select('*'),
+    supabase.from('manager_validations').select('*'),
+  ]);
+  if (emps.error) throw emps.error;
+  if (baselines.error) throw baselines.error;
+  if (reports.error) throw reports.error;
+  if (vals.error) throw vals.error;
+  return {
+    employees: emps.data,
+    baselines: baselines.data,
+    reports: reports.data,
+    validations: vals.data
+  };
+}
+
+// =========================================
+// Compute metrics for each employee
+// =========================================
+function computeAll() {
+  const out = STATE.data.employees.map(e => {
+    const b = STATE.data.baselines.find(x => x.employee_id === e.id);
+    const r = STATE.data.reports.find(x => x.employee_id === e.id);
+    const v = STATE.data.validations.find(x => x.employee_id === e.id);
+    if (!b || !r) return null;
+
+    const peopleCost = e.people_cost || e.salary;
+    const hourly = peopleCost / STATE.hours;
+    const hrsSaved = Math.max(0, (b.time_per_output_before - r.time_per_output_after) * r.output_after);
+    const valueSaved = hrsSaved * hourly;
+    const addedRev = v?.added_revenue || 0;
+    const costRed = v?.cost_reduction || 0;
+    const totalBenefit = valueSaved + addedRev + costRed;
+    const aiContrib = (v?.ai_contribution_pct || 0) / 100;
+    const adjBenefit = totalBenefit * aiContrib;
+
+    // Cost: license + training amortized + setup amortized
+    let aiCost = 0;
+    if (e.has_license) {
+      const tool = r.ai_tool_used;
+      if (tool && tool.includes('Claude Code')) aiCost = tool.includes('Cursor') ? 4200 : 3500;
+      else if (tool && tool.includes('Cursor')) aiCost = 700;
+      else if (tool && tool.includes('Copilot')) aiCost = 800;
+      else if (tool && tool.includes('Cowork')) aiCost = 2500;
+      else if (tool && tool !== '-') aiCost = 700;
+      // training amortization (only for active users)
+      if (r.ai_group !== 'Non-User') aiCost += STATE.trainCost / STATE.amort;
+      else aiCost += 0; // wasted license = no training
+      aiCost += 100; // setup
+    }
+
+    const isWastedLicense = e.has_license && r.ai_group === 'Non-User';
+    const adjROI = aiCost > 0 ? (adjBenefit - aiCost) / aiCost * 100 : null;
+    const rawROI = aiCost > 0 ? (totalBenefit - aiCost) / aiCost * 100 : null;
+    const mult = b.output_before > 0 ? r.output_after / b.output_before : 1;
+    const timeSavingPct = b.time_per_output_before > 0 ? (b.time_per_output_before - r.time_per_output_after) / b.time_per_output_before * 100 : 0;
+    const qualityImpPct = b.error_before > 0 ? (b.error_before - (v?.err_after || b.error_before)) / b.error_before * 100 : 0;
+
+    return {
+      id: e.id, name: e.full_name, position: e.position, department: e.department, manager: e.manager,
+      salary: e.salary, peopleCost,
+      ai_group: r.ai_group, ai_tool: r.ai_tool_used,
+      has_license: e.has_license, isWastedLicense,
+      output_before: b.output_before, output_after: r.output_after,
+      time_before: b.time_per_output_before, time_after: r.time_per_output_after,
+      err_before: b.error_before, err_after: v?.err_after || b.error_before,
+      ai_contribution_pct: v?.ai_contribution_pct || 0,
+      mgr_score: v?.business_impact_score || 0,
+      hrsSaved, valueSaved, addedRev, costRed, totalBenefit,
+      aiContrib, adjBenefit, aiCost,
+      adjROI, rawROI, mult, timeSavingPct, qualityImpPct
+    };
+  }).filter(x => x);
+  return out;
+}
+
+function getFiltered() {
+  return computeAll()
+    .filter(e => STATE.filterDept === 'all' || e.department === STATE.filterDept)
+    .filter(e => STATE.filterGroup === 'all' || e.ai_group === STATE.filterGroup);
+}
+
+// =========================================
+// Renderers
+// =========================================
+function renderExec() {
+  const all = computeAll();
+  const emps = getFiltered();
+  const aiUsers = emps.filter(e => e.ai_group !== 'Non-User');
+  const wastedLic = emps.filter(e => e.isWastedLicense);
+  const totalBenefit = emps.reduce((s,e)=>s+e.totalBenefit,0);
+  const totalAdj = emps.reduce((s,e)=>s+e.adjBenefit,0);
+  const totalCost = emps.reduce((s,e)=>s+e.aiCost,0);
+  const totalNet = totalAdj - totalCost;
+  const roi = totalCost > 0 ? (totalAdj - totalCost) / totalCost * 100 : 0;
+  const totalHrs = emps.reduce((s,e)=>s+e.hrsSaved,0);
+  const numLicenses = emps.filter(e => e.has_license).length;
+  const activeRate = numLicenses > 0 ? aiUsers.length / numLicenses * 100 : 0;
+  const adoptionRate = emps.length > 0 ? aiUsers.length / emps.length * 100 : 0;
+  const totalAddedRev = emps.reduce((s,e)=>s+e.addedRev,0);
+  const totalCostRed = emps.reduce((s,e)=>s+e.costRed,0);
+
+  document.getElementById('kpi-roi').textContent = totalCost > 0 ? FMT.pct1(roi) : '—';
+  const interp = roi >= 300 ? '🟢 คุ้มมาก' : roi >= 100 ? '🔵 คุ้ม' : roi >= 0 ? '🟡 เริ่มคุ้ม' : '🔴 ติดลบ';
+  document.getElementById('kpi-roi-text').textContent = `${interp} · 1฿ → ${(roi/100+1).toFixed(2)}฿`;
+  document.getElementById('kpi-net').textContent = FMT.thbK(totalNet);
+  const upfront = STATE.trainCost * aiUsers.length;
+  const payback = totalNet > 0 ? upfront / totalNet : null;
+  document.getElementById('kpi-payback').textContent = payback ? `Payback ≈ ${payback.toFixed(1)} เดือน` : 'Net ติดลบ';
+  document.getElementById('kpi-hours').textContent = Math.round(totalHrs).toLocaleString('th-TH') + ' ชม.';
+  document.getElementById('kpi-active').textContent = activeRate.toFixed(1)+'%';
+  document.getElementById('kpi-active-text').textContent = `${aiUsers.length}/${numLicenses} licenses ใช้จริง`;
+
+  // Groups
+  ['Champion','Adopter','Beginner','Non-User'].forEach((g,i) => {
+    const id = ['champion','adopter','beginner','nonuser'][i];
+    const c = emps.filter(e=>e.ai_group===g).length;
+    document.getElementById('grp-'+id).textContent = c;
+    document.getElementById('grp-'+id+'-pct').textContent = emps.length>0?(c/emps.length*100).toFixed(1)+'%':'0%';
+  });
+
+  // Bands
+  let b1=0,b2=0,b3=0,b4=0,b5=0;
+  emps.forEach(e=>{
+    if (e.isWastedLicense) { b5++; return; }
+    if (e.adjROI === null) return;
+    if (e.adjROI > 300) b1++;
+    else if (e.adjROI >= 100) b2++;
+    else if (e.adjROI >= 0) b3++;
+    else b4++;
+  });
+  ['band-1','band-2','band-3','band-4','band-5'].forEach((id,i)=>{
+    document.getElementById(id).textContent = [b1,b2,b3,b4,b5][i];
+  });
+
+  // Exec table
+  const wastedCost = wastedLic.reduce((s,e)=>s+e.aiCost,0);
+  document.getElementById('execTable').innerHTML = `
+    <tr><td>จำนวน AI License</td><td class="num">${numLicenses} licenses</td></tr>
+    <tr><td>Active Users (ใช้จริง)</td><td class="num">${aiUsers.length} คน</td></tr>
+    <tr><td>Active License Rate</td><td class="num">${activeRate.toFixed(1)}%</td></tr>
+    <tr><td>AI Adoption Rate (ทั้งองค์กร)</td><td class="num">${adoptionRate.toFixed(1)}%</td></tr>
+    <tr><td>ต้นทุน AI รวม / เดือน</td><td class="num">${FMT.thb(totalCost)}</td></tr>
+    <tr><td>ชั่วโมงที่ประหยัดได้รวม</td><td class="num">${Math.round(totalHrs).toLocaleString('th-TH')} ชม.</td></tr>
+    <tr><td>มูลค่าเวลาที่ประหยัดได้</td><td class="num">${FMT.thb(emps.reduce((s,e)=>s+e.valueSaved,0))}</td></tr>
+    <tr><td>รายได้เพิ่ม</td><td class="num">${FMT.thb(totalAddedRev)}</td></tr>
+    <tr><td>ต้นทุนที่ลดลง</td><td class="num">${FMT.thb(totalCostRed)}</td></tr>
+    <tr><td>ผลประโยชน์รวม (Total Benefit)</td><td class="num">${FMT.thb(totalBenefit)}</td></tr>
+    <tr><td>Adjusted Benefit (× AI Contribution %)</td><td class="num">${FMT.thb(totalAdj)}</td></tr>
+    <tr class="total"><td>Net Benefit / เดือน</td><td class="num">${FMT.thb(totalNet)}</td></tr>
+    <tr class="total"><td>AI ROI (Adjusted)</td><td class="num">${roi.toFixed(0)}%</td></tr>
+    <tr><td style="color:var(--yellow)">⚠️ Wasted License Cost</td><td class="num" style="color:var(--yellow)">${FMT.thb(wastedCost)} (${wastedLic.length} คน)</td></tr>
+  `;
+}
+
+function deptStats() {
+  const emps = getFiltered();
+  const depts = [...new Set(emps.map(e=>e.department))];
+  return depts.map(d => {
+    const list = emps.filter(e=>e.department===d);
+    const aiU = list.filter(e=>e.ai_group !== 'Non-User');
+    const totalB = list.reduce((s,e)=>s+e.totalBenefit,0);
+    const adjB = list.reduce((s,e)=>s+e.adjBenefit,0);
+    const totalC = list.reduce((s,e)=>s+e.aiCost,0);
+    const avgMult = list.reduce((s,e)=>s+e.mult,0)/list.length;
+    const avgContrib = list.reduce((s,e)=>s+e.ai_contribution_pct,0)/list.length;
+    const roi = totalC>0 ? (adjB-totalC)/totalC*100 : 0;
+    return {dept:d, headcount:list.length, aiUsers:aiU.length,
+      adoption: list.length>0?aiU.length/list.length*100:0,
+      avgMult, avgContrib, totalB, adjB, totalC, roi};
+  }).sort((a,b)=>b.adjB - a.adjB);
+}
+
+function renderCharts() {
+  const emps = getFiltered();
+  const ds = deptStats();
+  const lab = ds.map(d=>d.dept);
+
+  upsert('chartDeptValue','bar',{labels:lab,datasets:[
+    {label:'Total Benefit',data:ds.map(d=>d.totalB),backgroundColor:'#5b8cff',borderRadius:6},
+    {label:'Adjusted Benefit',data:ds.map(d=>d.adjB),backgroundColor:'#a855f7',borderRadius:6}
+  ]},{indexAxis:'y'});
+
+  upsert('chartProdImp','bar',{labels:lab,datasets:[
+    {label:'Avg Multiplier (x)',data:ds.map(d=>d.avgMult.toFixed(2)),backgroundColor:'#a855f7',borderRadius:6}
+  ]});
+
+  upsert('chartAdoption','bar',{labels:lab,datasets:[
+    {label:'Adoption %',data:ds.map(d=>d.adoption.toFixed(1)),backgroundColor:'#22c55e',borderRadius:6}
+  ]});
+
+  // Quality
+  const qAi = ds.map(d=>{const l=emps.filter(e=>e.department===d.dept&&e.ai_group!=='Non-User');return l.length>0?(l.reduce((s,e)=>s+e.err_after,0)/l.length).toFixed(1):0;});
+  const qNo = ds.map(d=>{const l=emps.filter(e=>e.department===d.dept&&e.ai_group==='Non-User');return l.length>0?(l.reduce((s,e)=>s+e.err_before,0)/l.length).toFixed(1):0;});
+  upsert('chartQuality','bar',{labels:lab,datasets:[
+    {label:'AI Users — Error %',data:qAi,backgroundColor:'#22c55e',borderRadius:6},
+    {label:'Non-Users — Error %',data:qNo,backgroundColor:'#ef4444',borderRadius:6}
+  ]});
+
+  // AI vs Non
+  const ai = emps.filter(e=>e.ai_group!=='Non-User');
+  const no = emps.filter(e=>e.ai_group==='Non-User');
+  const av = (a,k) => a.length>0?a.reduce((s,e)=>s+e[k],0)/a.length:0;
+  upsert('chartAiVsNo','bar',{
+    labels:['Multiplier (x)','Time Saving %','Quality Impr %','AI Contrib %'],
+    datasets:[
+      {label:'AI Users',data:[av(ai,'mult').toFixed(2),av(ai,'timeSavingPct').toFixed(1),av(ai,'qualityImpPct').toFixed(1),av(ai,'ai_contribution_pct').toFixed(1)],backgroundColor:'#5b8cff',borderRadius:6},
+      {label:'Non-Users',data:[av(no,'mult').toFixed(2),av(no,'timeSavingPct').toFixed(1),av(no,'qualityImpPct').toFixed(1),0],backgroundColor:'#64748b',borderRadius:6}
+    ]
+  });
+
+  // Time chart
+  const tAi = ds.map(d=>{const l=emps.filter(e=>e.department===d.dept&&e.ai_group!=='Non-User');return l.length>0?(l.reduce((s,e)=>s+e.time_after,0)/l.length).toFixed(2):0;});
+  const tNo = ds.map(d=>{const l=emps.filter(e=>e.department===d.dept&&e.ai_group==='Non-User');return l.length>0?(l.reduce((s,e)=>s+e.time_before,0)/l.length).toFixed(2):0;});
+  upsert('chartTime','bar',{labels:lab,datasets:[
+    {label:'AI Users (Time After)',data:tAi,backgroundColor:'#22c55e',borderRadius:6},
+    {label:'Non-Users (Time Before)',data:tNo,backgroundColor:'#ef4444',borderRadius:6}
+  ]});
+
+  upsert('chartDeptROI','bar',{labels:lab,datasets:[
+    {label:'Adjusted ROI %',data:ds.map(d=>d.roi.toFixed(1)),backgroundColor:ds.map(d=>d.roi>=300?'#22c55e':d.roi>=100?'#3b82f6':d.roi>=0?'#eab308':'#ef4444'),borderRadius:6}
+  ]});
+
+  upsert('chartDeptMix','bar',{
+    labels:lab,datasets:[
+      {label:'Champion',data:ds.map(d=>emps.filter(e=>e.department===d.dept&&e.ai_group==='Champion').length),backgroundColor:'#a855f7'},
+      {label:'Adopter',data:ds.map(d=>emps.filter(e=>e.department===d.dept&&e.ai_group==='Adopter').length),backgroundColor:'#3b82f6'},
+      {label:'Beginner',data:ds.map(d=>emps.filter(e=>e.department===d.dept&&e.ai_group==='Beginner').length),backgroundColor:'#eab308'},
+      {label:'Non-User',data:ds.map(d=>emps.filter(e=>e.department===d.dept&&e.ai_group==='Non-User').length),backgroundColor:'#64748b'}
+    ]},{stacked:true});
+}
+
+function upsert(id, type, data, opt={}) {
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+  if (STATE.charts[id]) STATE.charts[id].destroy();
+  const stacked = !!opt.stacked;
+  STATE.charts[id] = new Chart(ctx,{type,data,options:{
+    responsive:true, maintainAspectRatio:false, indexAxis: opt.indexAxis||'x',
+    plugins:{legend:{labels:{color:'#e8ecff',font:{family:"'IBM Plex Sans Thai'"}}}},
+    scales:{x:{ticks:{color:'#9aa3c7'},grid:{color:'#27305a40'},stacked},y:{ticks:{color:'#9aa3c7'},grid:{color:'#27305a40'},stacked}}
+  }});
+}
+
+function renderDeptTable() {
+  const ds = deptStats();
+  document.querySelector('#deptTable tbody').innerHTML = ds.map(d => {
+    const v = d.roi >= 300 ? 'tier-excellent' : d.roi >= 100 ? 'tier-good' : d.roi >= 0 ? 'tier-fair' : 'tier-poor';
+    const verdict = d.roi >= 300 ? 'คุ้มมาก' : d.roi >= 100 ? 'คุ้ม' : d.roi >= 0 ? 'เริ่มคุ้ม' : 'ติดลบ';
+    return `<tr>
+      <td><b>${d.dept}</b></td><td class="num">${d.headcount}</td><td class="num">${d.aiUsers}</td>
+      <td class="num">${d.adoption.toFixed(1)}%</td><td class="num">${d.avgMult.toFixed(2)}x</td>
+      <td class="num">${d.avgContrib.toFixed(0)}%</td>
+      <td class="num">${FMT.thb(d.totalB)}</td><td class="num">${FMT.thb(d.adjB)}</td>
+      <td class="num">${FMT.thb(d.totalC)}</td><td class="num"><b>${d.roi.toFixed(0)}%</b></td>
+      <td><span class="badge ${v}">${verdict}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderEmpTable() {
+  const emps = getFiltered();
+  const search = document.getElementById('empSearch').value.toLowerCase().trim();
+  const sort = document.getElementById('empSort').value;
+  let list = emps.filter(e => !search || e.name.toLowerCase().includes(search) || (e.position||'').toLowerCase().includes(search));
+  list.sort((a,b)=>{
+    if (sort==='roi_desc') return (b.adjROI??-99999) - (a.adjROI??-99999);
+    if (sort==='roi_asc') return (a.adjROI??99999) - (b.adjROI??99999);
+    if (sort==='value_desc') return b.adjBenefit - a.adjBenefit;
+    if (sort==='contrib_desc') return b.ai_contribution_pct - a.ai_contribution_pct;
+    if (sort==='dept') return a.department.localeCompare(b.department);
+    return 0;
+  });
+  document.getElementById('empCount').textContent = list.length + ' คน';
+  const groupBadge = g => {
+    const m = {'Champion':'champion','Adopter':'adopter','Beginner':'beginner','Non-User':'nonuser'};
+    return `<span class="badge ${m[g]}">${g}</span>`;
+  };
+  document.querySelector('#empTable tbody').innerHTML = list.map((e,i)=>{
+    const roiC = e.adjROI === null ? '—' : `${e.adjROI.toFixed(0)}%`;
+    const cls = e.isWastedLicense ? 'tier-wasted' : e.adjROI === null ? 'text-mute' : e.adjROI >= 300 ? 'tier-excellent' : e.adjROI >= 100 ? 'tier-good' : e.adjROI >= 0 ? 'tier-fair' : 'tier-poor';
+    const wasteIcon = e.isWastedLicense ? ' ⚠️' : '';
+    return `<tr>
+      <td class="text-mute small">${i+1}</td>
+      <td><div style="font-weight:500">${e.name}${wasteIcon}</div><div class="text-mute small">${e.position||'-'}</div></td>
+      <td>${e.department}</td><td>${groupBadge(e.ai_group)}</td>
+      <td class="small">${e.ai_tool}</td>
+      <td class="num">${FMT.thb(e.salary)}</td>
+      <td class="num">${e.output_before} → ${e.output_after.toFixed(1)}</td>
+      <td class="num">${e.hrsSaved.toFixed(0)}</td>
+      <td class="num">${FMT.thb(e.totalBenefit)}</td>
+      <td class="num">${e.ai_contribution_pct}%</td>
+      <td class="num">${FMT.thb(e.adjBenefit)}</td>
+      <td class="num">${e.aiCost?FMT.thb(e.aiCost):'—'}</td>
+      <td class="num"><span class="badge ${cls}">${e.isWastedLicense?'WASTE':roiC}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderPairwise() {
+  const emps = getFiltered();
+  const depts = [...new Set(emps.map(e=>e.department))];
+  let html = '';
+  depts.forEach(d => {
+    const ai = emps.filter(e=>e.department===d && e.ai_group!=='Non-User');
+    const no = emps.filter(e=>e.department===d && e.ai_group==='Non-User');
+    if (ai.length === 0 || no.length === 0) {
+      html += `<div style="display:grid;grid-template-columns:140px 1fr;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);opacity:.5"><div><b>${d}</b></div><div class="small text-mute">⚠️ ขาด ${ai.length===0?'AI Users':'Non-Users'} เพื่อเปรียบเทียบ</div></div>`;
+      return;
+    }
+    const aiOut = ai.reduce((s,e)=>s+e.output_after,0)/ai.length;
+    const noOut = no.reduce((s,e)=>s+e.output_after,0)/no.length;
+    const aiTime = ai.reduce((s,e)=>s+e.time_after,0)/ai.length;
+    const noTime = no.reduce((s,e)=>s+e.time_before,0)/no.length;
+    const m = Math.max(aiOut, noOut);
+    html += `<div style="display:grid;grid-template-columns:120px 1fr 90px 1fr 90px;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)">
+      <div><b>${d}</b><div class="text-mute small">AI:${ai.length} · Non:${no.length}</div></div>
+      <div>
+        <div style="position:relative;height:20px;background:var(--panel2);border-radius:4px;overflow:hidden"><div style="position:absolute;top:0;height:100%;width:${aiOut/m*100}%;background:linear-gradient(90deg,#3b82f6,#a855f7);padding:0 8px;color:#fff;font-size:11px;font-weight:600;display:flex;align-items:center">AI ${aiOut.toFixed(1)}</div></div>
+        <div style="position:relative;height:20px;background:var(--panel2);border-radius:4px;overflow:hidden;margin-top:4px"><div style="position:absolute;top:0;height:100%;width:${noOut/m*100}%;background:#475569;padding:0 8px;color:#fff;font-size:11px;font-weight:600;display:flex;align-items:center">Non ${noOut.toFixed(1)}</div></div>
+      </div>
+      <div class="num small text-mute">Output<br><b style="color:var(--green)">+${((aiOut-noOut)/noOut*100).toFixed(0)}%</b></div>
+      <div>
+        <div style="position:relative;height:20px;background:var(--panel2);border-radius:4px;overflow:hidden"><div style="position:absolute;top:0;height:100%;width:${aiTime/Math.max(aiTime,noTime)*100}%;background:linear-gradient(90deg,#3b82f6,#a855f7);padding:0 8px;color:#fff;font-size:11px;font-weight:600;display:flex;align-items:center">${aiTime.toFixed(1)}h</div></div>
+        <div style="position:relative;height:20px;background:var(--panel2);border-radius:4px;overflow:hidden;margin-top:4px"><div style="position:absolute;top:0;height:100%;width:${noTime/Math.max(aiTime,noTime)*100}%;background:#475569;padding:0 8px;color:#fff;font-size:11px;font-weight:600;display:flex;align-items:center">${noTime.toFixed(1)}h</div></div>
+      </div>
+      <div class="num small text-mute">Time<br><b style="color:var(--green)">−${((noTime-aiTime)/noTime*100).toFixed(0)}%</b></div>
+    </div>`;
+  });
+  document.getElementById('pairwise').innerHTML = html;
+}
+
+function renderChampionsRisk() {
+  const all = computeAll();
+  const champs = all.filter(e=>e.ai_group==='Champion').sort((a,b)=>b.adjBenefit-a.adjBenefit);
+  const risks = all.filter(e=>e.isWastedLicense || e.ai_group==='Non-User' || (e.ai_group==='Beginner' && e.adjBenefit < 5000)).sort((a,b)=>(a.adjBenefit||0)-(b.adjBenefit||0));
+
+  document.getElementById('championList').innerHTML = champs.slice(0,12).map((e,i)=>`
+    <div style="display:grid;grid-template-columns:30px 1fr 100px 100px;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)">
+      <div class="text-mute mono">#${i+1}</div>
+      <div><div style="font-weight:500">${e.name}</div><div class="text-mute small">${e.position} · ${e.department}</div></div>
+      <div class="num"><b style="color:#22c55e">${e.adjROI?.toFixed(0)||'—'}%</b><div class="text-mute small">Adj ROI</div></div>
+      <div class="num"><b>${FMT.thb(e.adjBenefit)}</b><div class="text-mute small">/เดือน</div></div>
+    </div>
+  `).join('') || '<div class="text-mute small">ยังไม่มี Champion</div>';
+
+  document.getElementById('riskList').innerHTML = risks.slice(0,12).map((e)=>{
+    const tag = e.isWastedLicense ? '<span class="badge tier-wasted">License สูญเปล่า</span>' : `<span class="badge ${e.ai_group==='Non-User'?'nonuser':'beginner'}">${e.ai_group}</span>`;
+    return `<div style="display:grid;grid-template-columns:1fr 100px 110px;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)">
+      <div><div style="font-weight:500">${e.name}</div><div class="text-mute small">${e.position} · ${e.department}</div></div>
+      <div class="num"><b style="color:${e.adjBenefit<5000?'#ef4444':'#eab308'}">${FMT.thb(e.adjBenefit)}</b><div class="text-mute small">Adj Benefit</div></div>
+      <div>${tag}</div>
+    </div>`;
+  }).join('') || '<div class="text-mute small">ไม่มีคนเสี่ยง</div>';
+}
+
+function renderFlow() {
+  const steps = [
+    {n:1, title:'Finance / IT บันทึกต้นทุน AI', sub:'License + Training + Setup + Integration', owner:'Finance / IT'},
+    {n:2, title:'HR ทำ Employee Master', sub:'รายชื่อพนักงานที่ได้ License + เงินเดือน + People Cost', owner:'HR'},
+    {n:3, title:'เก็บ Baseline ก่อนใช้ AI 30 วัน', sub:'Output, Time, Quality, SLA, Revenue, Cost', owner:'พนักงาน + หัวหน้า'},
+    {n:4, title:'พนักงานกรอก Monthly AI Usage', sub:'Output หลัง · Time หลัง · Tool · งานที่ใช้ · แนบหลักฐาน', owner:'พนักงาน'},
+    {n:5, title:'พนักงานแนบหลักฐาน', sub:'ลิงก์ / ไฟล์ / Prompt / Output ที่ AI ช่วย', owner:'พนักงาน'},
+    {n:6, title:'หัวหน้า Validate', sub:'Output จริง · เวลาประหยัดจริง · คุณภาพ · AI Contribution %', owner:'Manager'},
+    {n:7, title:'HR คำนวณ Hours Saved', sub:'(Time ก่อน − Time หลัง) × Output หลัง', owner:'HR / Data'},
+    {n:8, title:'แปลง Hours Saved เป็นเงิน', sub:'Hours Saved × Hourly Rate', owner:'HR / Data'},
+    {n:9, title:'รวม Added Revenue + Cost Reduction', sub:'รวมเป็น Total Benefit · ปรับด้วย AI Contribution %', owner:'HR / Data'},
+    {n:10, title:'คำนวณ ROI รายคน/ทีม/BU', sub:'(Adjusted Benefit − Cost) ÷ Cost × 100', owner:'HR / Data'},
+    {n:11, title:'ผู้บริหารตัดสินใจ', sub:'ขยาย / ลด / เปลี่ยน Tool · Reward Champion · PIP Non-User', owner:'Management'},
+  ];
+  document.getElementById('flowSteps').innerHTML = steps.map(s=>`
+    <div class="flow-step">
+      <div class="num">${s.n}</div>
+      <div><h5>${s.title}</h5><p>${s.sub}</p></div>
+      <div class="owner">เจ้าของข้อมูล<b>${s.owner}</b></div>
+    </div>
+  `).join('');
+}
+
+function rerenderAll() {
+  renderExec();
+  renderCharts();
+  renderDeptTable();
+  renderEmpTable();
+  renderPairwise();
+  renderChampionsRisk();
+  renderFlow();
+}
+
+function init() {
+  // Mount template
+  document.getElementById('app').innerHTML = document.getElementById('tpl-app').innerHTML;
+
+  // Filters
+  const depts = [...new Set(STATE.data.employees.map(e=>e.department))];
+  const sel = document.getElementById('filterDept');
+  depts.forEach(d => { const o = document.createElement('option'); o.value = d; o.textContent = d; sel.appendChild(o); });
+  sel.addEventListener('change', e => { STATE.filterDept = e.target.value; rerenderAll(); });
+  document.getElementById('filterGroup').addEventListener('change', e => { STATE.filterGroup = e.target.value; rerenderAll(); });
+  document.getElementById('empSearch').addEventListener('input', renderEmpTable);
+  document.getElementById('empSort').addEventListener('change', renderEmpTable);
+
+  // Tabs
+  document.querySelectorAll('.tab').forEach(t => {
+    t.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+      document.querySelectorAll('section').forEach(s=>s.classList.remove('active'));
+      t.classList.add('active');
+      document.getElementById('sec-'+t.dataset.tab).classList.add('active');
+      setTimeout(()=>{Object.values(STATE.charts).forEach(c=>c.resize())},50);
+    });
+  });
+
+  rerenderAll();
+}
+
+(async () => {
+  try {
+    STATE.data = await loadData();
+    init();
+  } catch (err) {
+    document.getElementById('app').innerHTML = `<div style="padding:40px;color:#ef4444">โหลดข้อมูลล้มเหลว: ${err.message}</div>`;
+    console.error(err);
+  }
+})();
+</script>
+</body>
+</html>
