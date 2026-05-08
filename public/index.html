@@ -402,7 +402,7 @@ footer{margin-top:36px;padding:18px;color:var(--mute);font-size:12px;text-align:
 // =========================================
 const SUPABASE_URL = 'https://vxcobdgptjcprexpktyd.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_S5c-ncZ9JRoe_UVTJhCblg_J2hAnD5a';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const STATE = {
   hours: 176, period: 3, trainCost: 5000, amort: 12,
@@ -423,10 +423,10 @@ const FMT = {
 // =========================================
 async function loadData() {
   const [emps, baselines, reports, vals] = await Promise.all([
-    supabase.from('employees').select('*').order('id'),
-    supabase.from('baseline').select('*'),
-    supabase.from('monthly_reports').select('*'),
-    supabase.from('manager_validations').select('*'),
+    sb.from('employees').select('*').order('id'),
+    sb.from('baseline').select('*'),
+    sb.from('monthly_reports').select('*'),
+    sb.from('manager_validations').select('*'),
   ]);
   if (emps.error) throw emps.error;
   if (baselines.error) throw baselines.error;
