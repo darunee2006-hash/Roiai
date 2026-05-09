@@ -846,3 +846,42 @@ async function requireHrAdmin() {
   if (!session) { location.href = '/login.html'; return null; }
   const {data:emp} = await sb.from('employees').select('*').eq('user_id', session.user.id).maybeSingle();
   if (!emp) {
+    document.getElementById('app').innerHTML = `<div style="padding:60px;text-align:center;color:#ef4444">บัญชี ${session.user.email} ไม่ผูกกับพนักงาน — โปรดติดต่อ HR</div>`;
+    return null;
+  }
+  if (emp.role === 'manager') { location.href = '/manager.html'; return null; }
+  if (emp.role === 'employee') { location.href = '/employee.html'; return null; }
+  return emp;
+}
+
+async function logout() {
+  await sb.auth.signOut();
+  location.href = '/login.html';
+}
+window.logout = logout;
+
+(async () => {
+  try {
+    const me = await requireHrAdmin();
+    if (!me) return;
+    STATE.data = await loadData();
+    init();
+    // Add user pill + logout to hero
+    setTimeout(() => {
+      const hero = document.querySelector('.hero');
+      if (hero && !document.getElementById('userPill')) {
+        const pill = document.createElement('div');
+        pill.id = 'userPill';
+        pill.style.cssText = 'display:flex;gap:10px;align-items:center;margin-left:auto';
+        pill.innerHTML = `<div style="background:var(--panel);border:1px solid var(--line);padding:6px 12px;border-radius:999px;font-size:12px;display:flex;align-items:center;gap:8px"><div style="width:8px;height:8px;border-radius:50%;background:#22c55e"></div>${me.full_name} (HR Admin)</div><button onclick="logout()" style="background:transparent;border:1px solid var(--line);color:var(--mute);padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer;font-family:inherit">ออกจากระบบ</button>`;
+        hero.appendChild(pill);
+      }
+    }, 100);
+  } catch (err) {
+    document.getElementById('app').innerHTML = `<div style="padding:40px;color:#ef4444">โหลดข้อมูลล้มเหลว: ${err.message}</div>`;
+    console.error(err);
+  }
+})();
+</script>
+</body>
+</html>
