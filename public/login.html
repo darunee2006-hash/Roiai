@@ -73,15 +73,19 @@ document.getElementById('form').addEventListener('submit',async e=>{
   const msg=document.getElementById('msg');
   btn.disabled=true; btn.textContent='กำลังส่ง...';
 
-  // Pre-check ว่า email อยู่ใน employees ไหม
-  const {data:emp}=await sb.from('employees').select('id,full_name,role').eq('email',email.toLowerCase()).maybeSingle();
+  // Pre-check ว่า email อยู่ใน employees ไหม (ผ่าน RPC เพราะ RLS ปิด public read)
+  const {data:checkData,error:checkErr}=await sb.rpc('check_employee_email',{p_email:email});
+  const emp=Array.isArray(checkData)?checkData[0]:null;
   if(!emp){
     msg.className='msg error';
     msg.style.display='block';
-    msg.innerHTML=`❌ ไม่พบ ${email} ในระบบ — โปรดติดต่อ HR`;
+    msg.innerHTML=`❌ ไม่พบ ${email} ในระบบ — โปรดติดต่อ HR<br><span style="font-size:11px;opacity:.6">${checkErr?checkErr.message:''}</span>`;
     btn.disabled=false; btn.textContent='ส่ง Magic Link →';
     return;
   }
+  // map RPC fields to common shape
+  emp.full_name=emp.emp_name;
+  emp.id=emp.emp_id;
 
   const {error}=await sb.auth.signInWithOtp({
     email,
