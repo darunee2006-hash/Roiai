@@ -7,17 +7,18 @@
 ## สารบัญ
 
 1. [ภาพรวมระบบ](#1-ภาพรวมระบบ)
-2. [วิธีเข้าใช้งาน](#2-วิธีเข้าใช้งาน)
+2. [วิธีเข้าใช้งาน (Login + 4 หน้า)](#2-วิธีเข้าใช้งาน-login--4-หน้า)
 3. [ทำความเข้าใจ 9 แท็บใน Dashboard](#3-ทำความเข้าใจ-9-แท็บใน-dashboard)
 4. [4 กลุ่มพนักงาน · ความหมาย + การจัดการ](#4-4-กลุ่มพนักงาน--ความหมาย--การจัดการ)
 5. [5 ROI Bands · เกณฑ์ตีความผล](#5-5-roi-bands--เกณฑ์ตีความผล)
 6. [สูตรคำนวณทั้งหมด](#6-สูตรคำนวณทั้งหมด)
 7. [Flow การเก็บข้อมูล 11 ขั้นตอน](#7-flow-การเก็บข้อมูล-11-ขั้นตอน)
-8. [คู่มือแยกตาม Role](#8-คู่มือแยกตาม-role)
+8. [คู่มือแยกตาม Role (พร้อม screenshot flow)](#8-คู่มือแยกตาม-role)
 9. [การจัดการข้อมูล (เพิ่ม/แก้/ลบ)](#9-การจัดการข้อมูล-เพิ่มแก้ลบ)
-10. [Maintenance & Update Code](#10-maintenance--update-code)
-11. [Troubleshooting](#11-troubleshooting)
-12. [FAQ](#12-faq)
+10. [Onboarding พนักงาน — ตั้ง email + ส่ง login link](#10-onboarding-พนักงาน)
+11. [Maintenance & Update Code](#11-maintenance--update-code)
+12. [Troubleshooting](#12-troubleshooting)
+13. [FAQ](#13-faq)
 
 ---
 
@@ -62,18 +63,36 @@
 
 ---
 
-## 2. วิธีเข้าใช้งาน
+## 2. วิธีเข้าใช้งาน (Login + 4 หน้า)
 
-### 2.1 สำหรับผู้ใช้ทั่วไป (HR / Manager / ผู้บริหาร)
+### 2.1 ระบบ Authentication — Magic Link (ไม่ต้องจำ password)
 
-**ไม่ต้อง install อะไร — แค่เปิดเบราว์เซอร์ที่ลิงก์ด้านบน**
+ระบบใช้ **Magic Link** ของ Supabase Auth — ปลอดภัย ไม่ต้องจำ password
 
-1. เปิด https://roiai-git-main-efinaihr-9594s-projects.vercel.app
-2. รอ 2-3 วินาที — ระบบจะดึงข้อมูลจาก Supabase อัตโนมัติ
-3. หน้าแรกจะเป็น **Executive Summary** — เห็นตัวเลขสรุป ROI ทันที
-4. เปลี่ยนแท็บด้านบนเพื่อดูข้อมูลแต่ละมุม
+**ขั้นตอน login (ครั้งแรก):**
 
-### 2.2 ตัวกรอง (Filters)
+1. เปิด **https://roiai-git-main-efinaihr-9594s-projects.vercel.app/login.html**
+2. ใส่ email บริษัทของคุณ (ที่ HR ตั้งไว้แล้ว)
+3. กด **"ส่ง Magic Link →"**
+4. เปิด email ที่ส่งมา — ชื่อหัวข้อ **"Confirm Your Signup"** หรือ **"Your Magic Link"**
+5. คลิกลิงก์ในเมล — ระบบจะ login อัตโนมัติและ redirect ตาม role:
+   - 👤 **Employee** → `/employee.html` (กรอก monthly report)
+   - 👨‍💼 **Manager** → `/manager.html` (validate ลูกทีม)
+   - 🏛 **HR Admin** → `/index.html` (ROI Dashboard ทั้งระบบ)
+6. ครั้งถัดไป login ใช้ flow เดียวกัน — session อยู่ได้ ~1 สัปดาห์
+
+> ⚠️ **ถ้าใส่ email แล้วเจอ "ไม่พบในระบบ"**: HR ยังไม่ได้ตั้ง email ในตาราง `employees` — ให้แจ้ง HR เพิ่ม
+
+### 2.2 4 หน้าในระบบ — เลือกตาม Role
+
+| Page | URL | สำหรับ | สรุปสิ่งที่ทำได้ |
+|---|---|---|---|
+| 🔑 **Login** | `/login.html` | ทุกคน | ใส่ email → รับ Magic Link |
+| 📝 **Employee** | `/employee.html` | พนักงานทุกคน | กรอก monthly report + แนบหลักฐาน + ดู ROI ตัวเอง |
+| 👨‍💼 **Manager** | `/manager.html` | หัวหน้างาน | review ลูกทีม + ใส่ AI Contribution % + Approve/Reject |
+| 📊 **Dashboard** | `/index.html` | HR Admin | ดู ROI ทั้งองค์กร · 9 แท็บ · เปรียบเทียบฝ่าย/บุคคล |
+
+### 2.3 ตัวกรองใน Dashboard (HR view เท่านั้น)
 
 มุมขวาบนของ dashboard มี 2 dropdowns:
 
@@ -350,68 +369,135 @@ AI Cost = License Cost + (Training Cost ÷ 12) + (Setup Cost ÷ 24)
 
 ## 8. คู่มือแยกตาม Role
 
-### 👤 สำหรับพนักงาน (Employee)
+---
 
-**สิ่งที่ต้องทำทุกเดือน:**
+### 👤 สำหรับพนักงาน (Employee) — `/employee.html`
 
-1. **ก่อนใช้ AI** (ครั้งแรกเท่านั้น): บันทึก baseline 30 วัน
-   - ปริมาณงานต่อเดือน
-   - เวลาต่อชิ้นงาน
-   - Error / งานที่ถูกแก้
+**Workflow รายเดือน:**
 
-2. **หลังใช้ AI** (ทุกเดือน): กรอกฟอร์มของ HR
-   - AI Tool ที่ใช้
-   - กี่วัน/สัปดาห์
-   - Output เดือนนี้
-   - เวลาต่อชิ้น (หลังใช้ AI)
-   - **แนบหลักฐาน**: ลิงก์งาน / prompt / screenshot
+```
+Login → กรอกฟอร์ม → Submit → รอหัวหน้า approve → ดู ROI ตัวเอง
+```
 
-3. **เปิด Dashboard ดูตัวเอง**: ไปแท็บ Employees → ค้นหาชื่อ → ดู ROI ตัวเอง
+**ขั้นตอนละเอียด:**
 
-### 👨‍💼 สำหรับหัวหน้างาน (Manager)
+1. **Login** ที่ https://roiai-git-main-efinaihr-9594s-projects.vercel.app/login.html → ใส่ email → คลิก Magic Link
+2. หน้า `/employee.html` จะเปิดอัตโนมัติ — เห็น:
+   - ฝ่าย / หัวหน้า / Baseline เดิม (Output ก่อน + เวลาก่อน AI)
+   - ฟอร์ม "📝 บันทึกผลงานเดือนนี้"
+3. **กรอกฟอร์ม** (ทุกฟิลด์ที่มีสีแดง `*` คือบังคับ):
+   - **เดือนที่รายงาน**: เลือกเดือนปัจจุบัน (auto-fill)
+   - **AI Tool ที่ใช้**: Claude Code / Cursor / ChatGPT / Gemini ฯลฯ
+   - **ระดับการใช้ AI**: Champion (ใช้ทุกวัน) / Adopter / Beginner / Non-User
+   - **ใช้ AI กี่วัน/สัปดาห์**: 0-7
+   - **📦 จำนวน Output เดือนนี้**: เช่น 32 ชิ้นงาน
+   - **⏱ เวลาต่อชิ้น (ชม.)**: เช่น 1.5 ชม. หลังใช้ AI
+4. **ดู "ชั่วโมงที่ประหยัดได้/เดือน"** — กล่องสีฟ้าด้านล่าง auto-calc ทันที
+5. **📎 แนบลิงก์หลักฐาน** (สำคัญ!) — ใส่ 1 บรรทัด/ลิงก์:
+   - ลิงก์ Google Doc / Drive ของงานที่ AI ช่วย
+   - ลิงก์ GitHub PR / commit
+   - Screenshot prompt + output
+   - ⚠️ ไม่มีหลักฐาน → หัวหน้า reject ได้
+6. **ใส่ Self Rating 1-5** + **Comment** เพิ่มเติม
+7. **เลือก action**:
+   - 💾 **"บันทึก Draft"** — เก็บไว้แก้ภายหลัง (ยังไม่ส่งหัวหน้า)
+   - ✅ **"ส่งให้หัวหน้า Review →"** — ส่งทันที (status = pending)
+8. หลังส่ง — ดู "📂 ประวัติรายงานของฉัน" ด้านล่าง — แต่ละ row แสดง status:
+   - ⏳ **รอ Validate** (pending) — หัวหน้ายังไม่ดู
+   - ✅ **Approved** — เข้า Dashboard แล้ว
+   - ❌ **Rejected** — ต้องแก้แล้วส่งใหม่
+   - 💾 **Draft** — ยังไม่ส่ง
+9. **ทุกเดือน** ทำซ้ำขั้นตอน 1-8 (เลือกเดือนใหม่)
 
-**สิ่งที่ต้องทำทุกเดือน (วันที่ 13-17):**
+> 💡 **ก่อนใช้ AI ครั้งแรก** ต้องมี Baseline (ตัวเลขก่อนใช้ AI) — HR จะ insert ให้ตอน onboarding
 
-1. ดูฟอร์มที่ลูกทีมส่ง
-2. **ตรวจสอบ**: ตัวเลขสมเหตุสมผลไหม? เทียบกับ Jira/CRM ตรงไหม?
-3. **ให้คะแนน**:
-   - ความเร็ว (1-5)
-   - คุณภาพ (1-5)
-   - Output (1-5)
-   - Business Impact (1-5)
-4. **ใส่ AI Contribution %** — ที่สำคัญที่สุด!
-   - ผลลัพธ์เกิดจาก AI กี่ %?
-   - ระวัง: ห้ามให้ 100% สบายๆ — ต้องคิดจริงๆ
-5. **กด Approve** ถ้าผ่าน หรือ Reject + Comment
+---
 
-**ใช้ Dashboard เพื่อ:**
-- ดูทีมของตัวเอง: เลือกฝ่าย → ดู Champion / Risk ในทีม
-- พิจารณา Reward / PIP
+### 👨‍💼 สำหรับหัวหน้างาน (Manager) — `/manager.html`
 
-### 👩‍💼 สำหรับ HR
+**Workflow รายเดือน (ช่วงวันที่ 13-17):**
 
-**สิ่งที่ต้องทำ:**
+```
+Login → เห็นรายการลูกทีมรอ validate → review ทีละคน → ใส่คะแนน + AI Contribution % → Approve
+```
 
-1. **ต้นเดือน** (วันที่ 4-7): ส่งฟอร์มให้พนักงานทั้งหมด
-2. **กลางเดือน** (วันที่ 18-22): รวมข้อมูล + insert ใน Supabase
-3. **ปลายเดือน** (วันที่ 23-25): เตรียมรายงานผู้บริหาร
+**ขั้นตอนละเอียด:**
 
-**Insert ข้อมูลใน Supabase Studio:**
+1. **Login** ปกติ → ระบบ redirect ไป `/manager.html` อัตโนมัติ
+2. หน้าแสดง **3 KPI** บน:
+   - ⏳ จำนวนรอ Validate (จะเปลี่ยนเป็น 0 เมื่อ approve หมด)
+   - ✅ Approved (เดือนนี้)
+   - 👥 ลูกทีม (จำนวน)
+   - ⌀ AI Contribution % เฉลี่ย
+3. **3 แท็บ**:
+   - **⏳ รอ Validate** — รายการ pending reports (default)
+   - **✅ Approved** — ที่ approve แล้ว
+   - **👥 ลูกทีม** — รายชื่อลูกทีมพร้อม last report status
+4. **Review รายงานแต่ละคน**:
+   - ดู Output เปลี่ยนแปลง (ก่อน → หลัง) + % เพิ่ม
+   - ดูเวลาที่เปลี่ยน (ชม./ชิ้น)
+   - ดู **Hours Saved** ที่คำนวณอัตโนมัติ
+   - ดู **📎 หลักฐาน** ที่ลูกทีมแนบ — คลิกเปิดดูได้
+   - ดู Comment ของลูกทีม
+5. **กด "✏️ Review + ใส่ AI Contribution %"** → ฟอร์ม validation จะเปิด
+6. **ให้คะแนน 1-5 ใน 4 มิติ**:
+   - เร็วขึ้น (Speed)
+   - Output (ปริมาณ)
+   - คุณภาพ (Quality)
+   - Business Impact
+7. **🎯 ใส่ AI Contribution % (สำคัญที่สุด!)**:
+   - Slider 0-100% — ลากเลือกค่า
+   - 100% = AI ทำทั้งหมด · 70% = หลัก · 50% = ครึ่ง · 30% = บางส่วน · 0% = ไม่เกี่ยว
+   - ⚠️ อย่าให้ 100% สบายๆ — คิดให้รอบคอบ
+8. **ใส่ตัวเลขเพิ่มเติม**:
+   - Error rate หลัง (%) — เช่น 5
+   - รายได้เพิ่ม (฿) — ถ้ามี Sales/Marketing impact
+   - ลดต้นทุน (฿) — เช่น OT ที่ลดลง
+9. **ใส่ Comment** (optional)
+10. **กด ✅ Approve** หรือ ❌ Reject (พร้อม comment ถึงลูกทีม)
+11. หลัง approve — รายงานเข้าระบบ ROI Dashboard ทันที (HR เห็น)
 
-ไปที่ https://supabase.com/dashboard/project/vxcobdgptjcprexpktyd → Table Editor
+> 💡 **เคล็ดลับ**: ถ้าตัวเลขดูสวยเกินไป → reject + comment ขอ evidence เพิ่ม
+
+---
+
+### 👩‍💼 สำหรับ HR Admin — `/index.html` (Dashboard ROI ทั้งระบบ)
+
+**สิทธิ์ของ HR Admin:**
+- ✅ เห็นข้อมูลพนักงานทุกคน · ทุกฝ่าย
+- ✅ Override Manager Validation ได้
+- ✅ Insert/Edit ใน Supabase Studio
+- ✅ ดู Dashboard ROI ทั้งองค์กร 9 แท็บ
+
+**Workflow รายเดือน:**
+
+| ช่วงวัน | งาน |
+|---|---|
+| **1-3** | อัพเดต `ai_costs` table — ใส่ต้นทุน license/setup ของเดือน |
+| **4-7** | ส่งลิงก์ login ให้พนักงานใหม่ (ดู section 10) |
+| **8-12** | ติดตามการกรอกของพนักงาน — ใครยังไม่ส่ง |
+| **13-17** | ติดตาม Manager validation — ถ้าหัวหน้าไหนไม่ทำ ส่งเตือน |
+| **18-22** | เปิด Dashboard → ตรวจ ROI · เตรียม Executive Summary |
+| **23-25** | Review กับผู้บริหาร · ตัดสินใจตาม Decision Tree |
+| **26-30** | ดำเนินการตามผล (Reward / PIP / โอน License) |
+
+**การ insert ข้อมูลผ่าน Supabase Studio:**
+
+ไปที่ https://supabase.com/dashboard/project/vxcobdgptjcprexpktyd/editor
 
 ลำดับ insert ที่ถูกต้อง:
 ```
-1. employees (ถ้ามีพนักงานใหม่)
-2. baseline (ถ้ายังไม่มี baseline เดือนก่อน)
-3. monthly_reports (ทุกเดือน)
-4. manager_validations (ทุกเดือน)
-5. ai_costs (ทุกเดือน)
+1. employees     (ถ้ามีพนักงานใหม่ — ใส่ email ด้วย)
+2. baseline      (ต้องมีก่อนใช้ AI · 1 row/พนักงาน)
+3. monthly_reports + manager_validations  (อัตโนมัติจากระบบ form)
+4. ai_costs      (รายเดือน)
 ```
+
+---
 
 ### 🏛 สำหรับผู้บริหาร (CEO / Board)
 
-**ดูแค่ 1 แท็บก็พอ: Executive Summary**
+**ดูแค่แท็บเดียว: Executive Summary**
 
 ตัวเลข 4 ตัวที่ต้องดู:
 1. **AI ROI (Adjusted)** — > 300% = ดี
@@ -500,7 +586,106 @@ training_cost: 0 (ถ้าเดือนนั้นไม่มี training �
 
 ---
 
-## 10. Maintenance & Update Code
+## 10. Onboarding พนักงาน
+
+### 10.1 ตั้ง email ของพนักงาน (จำเป็นก่อน login)
+
+ระบบใช้ email เป็นตัวระบุตัวตน — พนักงานทุกคนต้องมี email ในตาราง `employees` ก่อน
+
+**วิธีที่ 1 · Bulk Update ผ่าน CSV (แนะนำ สำหรับเริ่มต้น)**
+
+1. เปิดไฟล์ **`employees_emails_template.csv`** ในโฟลเดอร์ project (ใน Excel/Google Sheets)
+2. กรอก email ของพนักงานทุกคนในคอลัมน์ **H (email)**
+3. เปิดไฟล์ **`update_employee_emails.sql`** ใน text editor
+4. ใช้ Excel สร้าง UPDATE statements ด้วยสูตร:
+   ```
+   ="UPDATE employees SET email='"&H2&"' WHERE id="&A2&";"
+   ```
+   ลากสูตรทุกแถว → copy ค่า → paste แทนที่ใน `update_employee_emails.sql`
+5. ไป **https://supabase.com/dashboard/project/vxcobdgptjcprexpktyd/sql/new**
+6. Paste SQL ทั้งหมด → กด **Run (▶️)**
+7. ตรวจผล: section ท้ายไฟล์มี `SELECT` queries ตรวจสอบ
+
+**วิธีที่ 2 · ทีละคน ผ่าน Supabase Studio**
+
+1. ไป https://supabase.com/dashboard/project/vxcobdgptjcprexpktyd/editor
+2. เปิด table `employees`
+3. คลิก row → ใส่ email → Save
+
+### 10.2 ส่งลิงก์ login ให้พนักงาน
+
+หลังตั้ง email แล้ว ส่งข้อความนี้ให้พนักงาน:
+
+```
+สวัสดีค่ะ ทีมงานทุกคน
+
+📊 ระบบประเมิน ROI AI ของบริษัทพร้อมใช้งานแล้ว — กรุณา login ครั้งแรก:
+
+🔗 https://roiai-git-main-efinaihr-9594s-projects.vercel.app/login.html
+
+ขั้นตอน:
+1. ใส่ email บริษัทของคุณ
+2. กด "ส่ง Magic Link"
+3. เปิด email ที่ส่งมา (subject: "Confirm Your Signup")
+4. คลิกลิงก์ → ระบบ login อัตโนมัติ
+5. กรอกข้อมูลรายงาน AI ของคุณรายเดือน
+
+📋 คู่มือการใช้งาน: USER_GUIDE.md ใน GitHub repo
+
+หากพบปัญหา ติดต่อ: efinaihr@gmail.com
+
+ขอบคุณค่ะ
+```
+
+### 10.3 ตรวจสอบว่าใครยัง onboard ไม่เสร็จ
+
+รัน SQL นี้ใน Supabase:
+```sql
+-- ดูพนักงานที่ยังไม่มี email
+SELECT id, full_name, department, role
+FROM employees
+WHERE email IS NULL OR email = ''
+ORDER BY department;
+
+-- ดูพนักงานที่มี email แต่ยังไม่ login ครั้งแรก
+SELECT id, full_name, email, role
+FROM employees
+WHERE email IS NOT NULL AND email <> ''
+  AND user_id IS NULL;
+
+-- ดูพนักงานที่ login แล้ว (user_id ผูกแล้ว)
+SELECT e.id, e.full_name, e.email, e.role,
+       u.last_sign_in_at
+FROM employees e
+JOIN auth.users u ON u.id = e.user_id
+ORDER BY u.last_sign_in_at DESC;
+```
+
+### 10.4 พนักงานใหม่ที่เพิ่งจ้าง
+
+1. **เพิ่มใน Supabase**:
+```sql
+INSERT INTO employees (emp_code, full_name, department, position, role, manager, salary, people_cost, email)
+VALUES ('EMP084', 'นาย...', 'Dev', 'Software Developer', 'employee', 'นายหัวหน้า', 50000, 57500, 'newuser@efin.co.th');
+```
+
+2. **เพิ่ม Baseline** (รอ 30 วัน หรือใช้ค่าประมาณ):
+```sql
+INSERT INTO baseline (employee_id, task_type, output_before, time_per_output_before, error_before, measured_month)
+VALUES (84, 'เขียนโค้ด/Code review/Debug', 15, 10, 12, '2026-05');
+```
+
+3. **ผูก manager**:
+```sql
+UPDATE employees SET manager_emp_id = (SELECT id FROM employees WHERE full_name = 'นายหัวหน้า')
+WHERE id = 84;
+```
+
+4. **ส่งลิงก์ login** ให้พนักงาน
+
+---
+
+## 11. Maintenance & Update Code
 
 ### 10.1 ลำดับชั้นไฟล์
 
@@ -549,7 +734,39 @@ COPY (SELECT * FROM manager_validations) TO STDOUT WITH CSV HEADER;
 
 ---
 
-## 11. Troubleshooting
+## 12. Troubleshooting
+
+### ❌ "ไม่พบ email ในระบบ — โปรดติดต่อ HR"
+
+**สาเหตุ:** email ของพนักงานยังไม่ได้ตั้งใน Supabase
+
+**แก้:** HR ต้องตั้ง email ก่อน — ดู section 10 "Onboarding พนักงาน"
+
+### ❌ คลิก Magic Link แล้วเด้ง "Email link is invalid or has expired"
+
+**สาเหตุ:** ลิงก์ใช้ได้ครั้งเดียว · หมดอายุภายใน 1 ชั่วโมง
+
+**แก้:** กลับไปหน้า login ใหม่ → กดส่ง Magic Link อีกครั้ง → ใช้ลิงก์ใหม่ทันที
+
+### ❌ Login แล้วเด้งกลับไป login.html ซ้ำๆ
+
+**สาเหตุ:** Browser cookies ของ Supabase ถูก block หรือ third-party cookies disabled
+
+**แก้:**
+1. เช็คใน Chrome Settings → Privacy → อนุญาต third-party cookies ของ supabase.co
+2. ลอง browser อื่น (Firefox, Edge, Safari)
+3. ลอง Incognito mode
+
+### ❌ พนักงาน login แล้วเด้งไปหน้า Manager แทนที่จะเป็น Employee (หรือกลับกัน)
+
+**สาเหตุ:** role ใน employees table ตั้งไม่ถูก
+
+**แก้:**
+```sql
+UPDATE employees SET role = 'employee' WHERE id = 84;  -- เปลี่ยนเป็น employee
+UPDATE employees SET role = 'manager' WHERE id = 84;   -- เปลี่ยนเป็น manager
+UPDATE employees SET role = 'hr_admin' WHERE id = 84;  -- เปลี่ยนเป็น HR Admin
+```
 
 ### ❌ เปิดเว็บแล้วเห็นแต่ "กำลังโหลดข้อมูลจาก Supabase..." ไม่หาย
 
@@ -557,8 +774,9 @@ COPY (SELECT * FROM manager_validations) TO STDOUT WITH CSV HEADER;
 
 **แก้:**
 1. กด F12 เปิด Console — ดู error
-2. ถ้าเห็น `403 Forbidden` → ตรวจสอบ RLS policy บน Supabase
-3. ถ้าเห็น `Network error` → Supabase project pause หรือไม่ → เข้า dashboard restore
+2. ถ้าเห็น `infinite recursion detected in policy` → RLS policy มีปัญหา · ติดต่อ HR Admin
+3. ถ้าเห็น `403 Forbidden` → permission ไม่พอ · เช็ค role
+4. ถ้าเห็น `Network error` → Supabase project pause หรือไม่ → เข้า dashboard restore
 
 ### ❌ Build fail บน Vercel
 
@@ -601,7 +819,7 @@ COPY (SELECT * FROM manager_validations) TO STDOUT WITH CSV HEADER;
 
 ---
 
-## 12. FAQ
+## 13. FAQ
 
 ### ❓ ระบบนี้ทดแทนระบบ HR เดิมหรือไม่?
 
@@ -675,6 +893,7 @@ URL `https://roiai-git-main-efinaihr-9594s-projects.vercel.app` **เปิด p
 
 ## 📝 Changelog
 
+- **2026-05-09**: v1.1 · เพิ่มระบบ Authentication (Magic Link) · 3 หน้าใหม่ (login/employee/manager) · RLS policies · CSV template สำหรับ HR
 - **2026-05-08**: v1.0 · ระบบเริ่มต้น · 83 พนักงาน · 7 ฝ่าย · ROI 1,459%
 
 ---
